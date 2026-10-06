@@ -48,13 +48,14 @@ For workflows that need stronger provenance, RuntimeTruth also supports an optio
 ```text
 baseline
   -> RFC 8785 canonical SHA-256 digest
-  -> in-toto Statement v1
-  -> DSSE / Sigstore keyless attestation
+  -> canonical in-toto Statement v1
+  -> Sigstore keyless signature over exact statement bytes
   -> exact signer identity verification
+  -> baseline digest binding
   -> runtime comparison
 ```
 
-`verify-attestation` fails unless Cosign verifies the Sigstore bundle against the exact expected certificate identity and OIDC issuer, and the signed in-toto subject digest matches the supplied canonical baseline.
+`verify-attestation` fails unless Cosign verifies the exact signed statement bytes against the Sigstore bundle, expected certificate identity and OIDC issuer, and RuntimeTruth confirms that the signed in-toto subject digest matches the supplied canonical baseline.
 
 This improves baseline integrity and signer provenance, but RuntimeTruth still does **not** establish:
 
