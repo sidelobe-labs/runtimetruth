@@ -36,7 +36,9 @@ Implemented for v0.2.0:
 - package build and clean-wheel smoke testing in CI
 - source-pinned installation retained for unreleased CI validation
 
-**Exit:** publish v0.2.0 to PyPI and verify a clean external install.
+**Status:** shipped. RuntimeTruth v0.2.0 is published on PyPI through GitHub OIDC Trusted Publishing.
+
+**Exit:** achieved. A new user can install the released CLI without cloning the repository.
 
 ### 2. External validation
 
