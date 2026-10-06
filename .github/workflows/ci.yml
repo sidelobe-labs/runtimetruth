@@ -36,3 +36,28 @@ jobs:
 
       - name: Test
         run: pytest
+
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tooling
+        run: python -m pip install "build>=1.2"
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Install wheel in clean environment
+        run: |
+          python -m venv /tmp/runtimetruth-smoke
+          /tmp/runtimetruth-smoke/bin/python -m pip install dist/*.whl
+          /tmp/runtimetruth-smoke/bin/runtimetruth --version
