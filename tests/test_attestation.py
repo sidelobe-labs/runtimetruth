@@ -1,6 +1,7 @@
 import base64
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 import rfc8785
@@ -204,8 +205,8 @@ def test_create_signed_attestation_uses_native_cosign_attest_blob(
         canonical_path = args[-1]
         statement_path = args[args.index("--statement") + 1]
 
-        assert open(canonical_path, "rb").read() == canonical_snapshot_bytes(snapshot)
-        assert open(statement_path, "rb").read() == statement_bytes(snapshot)
+        assert Path(canonical_path).read_bytes() == canonical_snapshot_bytes(snapshot)
+        assert Path(statement_path).read_bytes() == statement_bytes(snapshot)
 
         _write_bundle(bundle, _statement(snapshot))
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
@@ -269,7 +270,7 @@ def test_verify_signed_attestation_checks_identity_digest_and_predicate(
     def fake_run(args, **kwargs):
         calls.append(args)
         canonical_path = args[-1]
-        assert open(canonical_path, "rb").read() == canonical_snapshot_bytes(snapshot)
+        assert Path(canonical_path).read_bytes() == canonical_snapshot_bytes(snapshot)
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("runtimetruth.attestation.subprocess.run", fake_run)
