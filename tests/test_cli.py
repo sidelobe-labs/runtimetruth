@@ -136,6 +136,7 @@ def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys)
             "server:docs:plugin_id": None,
             "server:docs:http_origin": "https://developers.openai.com",
             "server:docs:tool_count": 1,
+            "server:docs:tool_names_included": True,
             "server:docs:tools": '["search"]',
             "server:docs:tool_catalog_status": "available",
             "server:docs:tool_catalog_sha256": "sha256:" + "b" * 64,
