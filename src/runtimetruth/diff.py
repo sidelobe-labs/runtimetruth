@@ -93,8 +93,8 @@ def _diff_record(before: EvidenceRecord, after: EvidenceRecord) -> tuple[FieldCh
     fields = sorted(set(before.data) | set(after.data))
 
     for field in fields:
-        before_value: DiffValue = before.data[field] if field in before.data else MISSING
-        after_value: DiffValue = after.data[field] if field in after.data else MISSING
+        before_value: DiffValue = before.data.get(field, MISSING)
+        after_value: DiffValue = after.data.get(field, MISSING)
 
         if before_value != after_value:
             changes.append(
