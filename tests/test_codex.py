@@ -288,6 +288,7 @@ def test_collector_resolves_sanitized_thread_mcp_inventory(tmp_path: Path) -> No
     assert mcp.data["server:filesystem:plugin_id"] is None
     assert mcp.data["server:filesystem:http_origin"] is None
     assert mcp.data["server:filesystem:tool_count"] == 1
+    assert mcp.data["server:filesystem:tool_names_included"] is True
     assert mcp.data["server:filesystem:tools"] == '["read_file"]'
     assert mcp.data["server:filesystem:tool_catalog_status"] == "available"
     assert str(mcp.data["server:filesystem:tool_catalog_sha256"]).startswith("sha256:")
@@ -297,6 +298,7 @@ def test_collector_resolves_sanitized_thread_mcp_inventory(tmp_path: Path) -> No
     assert mcp.data["server:remote:plugin_id"] == "plugin-example"
     assert mcp.data["server:remote:http_origin"] == "https://mcp.example.test"
     assert mcp.data["server:remote:tool_count"] == 2
+    assert mcp.data["server:remote:tool_names_included"] is True
     assert mcp.data["server:remote:tools"] == '["fetch","search"]'
     assert mcp.data["server:remote:tool_catalog_status"] == "available"
 
