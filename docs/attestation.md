@@ -79,18 +79,18 @@ RuntimeTruth:
 
 1. parses the baseline using the supported snapshot schema,
 2. writes the RFC 8785 canonical snapshot into a temporary file,
-3. creates a small RuntimeTruth predicate,
-4. asks `cosign attest-blob` to produce a DSSE-wrapped in-toto Statement v1,
+3. builds the exact RuntimeTruth in-toto Statement v1, including the canonical SHA-256 subject digest and versioned RuntimeTruth predicate,
+4. canonicalizes that statement and asks `cosign attest-blob --statement` to DSSE-sign it,
 5. stores the signed material in the requested Sigstore bundle,
 6. removes temporary canonicalization inputs.
 
-The predicate type is:
+The signed statement uses predicate type:
 
 ```text
 https://sidelobe.dev/runtimetruth/attestation/v1
 ```
 
-The predicate contains only:
+The RuntimeTruth predicate contains only:
 
 - RuntimeTruth attestation schema version
 - RuntimeTruth snapshot schema version
