@@ -73,6 +73,16 @@ Verification uses stable process exit codes:
 - `2` — semantic runtime drift detected
 - `1` — collection, input, or comparison error
 
+Selective runtime invariants can be protected explicitly:
+
+```console
+runtimetruth verify baseline.json --codex <cwd> --resolve-thread \
+  --protect codex.thread.model \
+  --protect codex.instructions
+```
+
+For automation, add `--json` to emit a versioned structured PASS/DRIFT report without changing the exit-code contract.
+
 `--resolve-thread` creates an ephemeral Codex thread without starting a turn. `--resolve-mcp` additionally probes thread-scoped MCP runtime state and may contact configured MCP servers or refresh authentication; it does not call MCP tools.
 
 ## Evidence currently collected
@@ -104,6 +114,7 @@ See:
 - [Landscape and positioning](docs/landscape.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture](docs/architecture.md)
+- [CI integration](docs/ci.md)
 
 ## Development
 
