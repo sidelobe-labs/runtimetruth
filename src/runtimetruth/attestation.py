@@ -254,7 +254,9 @@ def load_statement(statement_path: str) -> dict[str, object]:
     try:
         canonical = rfc8785.dumps(statement)
     except rfc8785.CanonicalizationError as exc:
-        raise AttestationError(f"attestation statement is not RFC 8785 canonicalizable: {exc}") from exc
+        raise AttestationError(
+            f"attestation statement is not RFC 8785 canonicalizable: {exc}"
+        ) from exc
 
     if payload != canonical:
         raise AttestationError("attestation statement is not RFC 8785 canonical JSON")
