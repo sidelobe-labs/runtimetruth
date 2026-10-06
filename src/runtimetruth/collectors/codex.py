@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import queue
 import shutil
@@ -205,10 +206,8 @@ def _query_effective_config(
         )
         result = _read_response(output, request_id=2, deadline=deadline)
     finally:
-        try:
+        with contextlib.suppress(OSError):
             process.stdin.close()
-        except OSError:
-            pass
         _stop_process(process)
 
     config = result.get("config")
