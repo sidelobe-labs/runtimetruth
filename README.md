@@ -4,7 +4,7 @@
 
 RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
 
-> Status: early private prototype. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, and baseline verification have been validated against real local runtimes.
+> Status: pre-release. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, selective baseline verification and machine-readable verification reports have been validated against real local runtimes.
 
 ## Why
 
@@ -35,6 +35,45 @@ RuntimeTruth grew out of operating self-hosted workers and noticing that source 
 The project is built from evidence outward. It started with systemd, procfs, and Git identity, then used the same model to inspect agent-specific Codex state.
 
 [Read the origin story](docs/origin.md).
+
+## Installation
+
+RuntimeTruth is not yet published to PyPI. For the pre-release repository:
+
+```bash
+git clone https://github.com/sidelobe-labs/runtimetruth.git
+cd runtimetruth
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+runtimetruth --version
+```
+
+For CI, pin the source revision rather than following a moving branch. See [CI integration](docs/ci.md).
+
+## Quick start
+
+Capture effective Codex runtime state:
+
+```bash
+runtimetruth inspect codex . --resolve-thread --pretty > baseline.json
+```
+
+Verify the current runtime against that baseline:
+
+```bash
+runtimetruth verify baseline.json --codex . --resolve-thread
+```
+
+Protect only selected runtime invariants when strict snapshot equality is too broad:
+
+```bash
+runtimetruth verify baseline.json --codex . --resolve-thread \
+  --protect codex.thread.model \
+  --protect codex.instructions
+```
+
+Add `--json` for a versioned machine-readable PASS/DRIFT report.
 
 ## Current CLI
 
@@ -115,6 +154,8 @@ See:
 - [Roadmap](docs/roadmap.md)
 - [Architecture](docs/architecture.md)
 - [CI integration](docs/ci.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
 
 ## Development
 
