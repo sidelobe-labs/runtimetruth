@@ -8,6 +8,14 @@ import sys
 from collections.abc import Callable
 
 from runtimetruth import __version__
+from runtimetruth.attestation import (
+    AttestationError,
+    create_signed_attestation,
+    load_statement,
+    snapshot_sha256,
+    validate_statement,
+    verify_statement_signature,
+)
 from runtimetruth.collectors import (
     CollectionError,
     collect_codex_runtime,
@@ -103,6 +111,26 @@ def _diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def _digest(args: argparse.Namespace) -> int:
+    baseline = load_snapshot(args.baseline)
+    print(f"sha256:{snapshot_sha256(baseline)}")
+    return 0
+
+
+def _attest(args: argparse.Namespace) -> int:
+    baseline = load_snapshot(args.baseline)
+    digest = create_signed_attestation(
+        baseline,
+        statement_path=args.statement,
+        bundle_path=args.bundle,
+        cosign=args.cosign,
+    )
+    print(f"BASELINE: sha256:{digest}")
+    print(f"STATEMENT: {args.statement}")
+    print(f"BUNDLE: {args.bundle}")
+    return 0
+
+
 def _render_verify(
     result: SnapshotDiff,
     *,
@@ -162,6 +190,80 @@ def _verify(args: argparse.Namespace) -> int:
         selectors=selectors,
         json_output=args.json,
     )
+
+
+def _verify_attestation(args: argparse.Namespace) -> int:
+    baseline = load_snapshot(args.baseline)
+
+    verify_statement_signature(
+        args.attestation,
+        args.bundle,
+        certificate_identity=args.certificate_identity,
+        certificate_oidc_issuer=args.certificate_oidc_issuer,
+        cosign=args.cosign,
+    )
+    statement = load_statement(args.attestation)
+    digest = validate_statement(statement, baseline)
+
+    if args.current is not None and args.codex is not None:
+        raise DiffError(
+            "verify-attestation accepts either a current snapshot or --codex, not both"
+        )
+    if args.current is None and args.codex is None:
+        raise DiffError("verify-attestation requires a current snapshot or --codex")
+
+    if args.codex is not None:
+        current = _capture_codex_snapshot(
+            args.codex,
+            resolve_thread=args.resolve_thread,
+            resolve_mcp=args.resolve_mcp,
+        )
+    else:
+        current = load_snapshot(args.current)
+
+    selectors = tuple(args.protect)
+    result = diff_snapshots(
+        baseline,
+        current,
+        selectors=selectors,
+    )
+    status = "drift" if result.changes else "pass"
+    exit_code = _VERIFY_DRIFT_EXIT if result.changes else 0
+
+    if args.json:
+        report = {
+            "report_schema_version": 1,
+            "status": status,
+            "identity": {
+                "verified": True,
+                "certificate_identity": args.certificate_identity,
+                "oidc_issuer": args.certificate_oidc_issuer,
+            },
+            "baseline": {
+                "verified": True,
+                "sha256": digest,
+            },
+            "target": baseline.target.to_dict(),
+            "protected": list(selectors),
+            **diff_to_dict(result),
+        }
+        print(json.dumps(report, separators=(",", ":"), sort_keys=True))
+        return exit_code
+
+    print("IDENTITY: VERIFIED")
+    print(f"  certificate_identity: {args.certificate_identity}")
+    print(f"  oidc_issuer: {args.certificate_oidc_issuer}")
+    print("BASELINE: VERIFIED")
+    print(f"  sha256: {digest}")
+
+    if not result.changes:
+        print("RUNTIME: PASS")
+        return 0
+
+    print("RUNTIME: DRIFT")
+    print()
+    print(format_diff(result))
+    return _VERIFY_DRIFT_EXIT
 
 
 def _add_pretty_argument(parser: argparse.ArgumentParser) -> None:
@@ -238,6 +340,38 @@ def build_parser() -> argparse.ArgumentParser:
     diff_parser.add_argument("after")
     diff_parser.set_defaults(handler=_diff)
 
+    digest_parser = commands.add_parser(
+        "digest",
+        help="Compute the RFC 8785 canonical SHA-256 digest of a baseline snapshot.",
+    )
+    digest_parser.add_argument("baseline")
+    digest_parser.set_defaults(handler=_digest)
+
+    attest_parser = commands.add_parser(
+        "attest",
+        help="Create and keylessly sign an in-toto attestation for a baseline snapshot.",
+    )
+    attest_parser.add_argument("baseline")
+    attest_parser.add_argument(
+        "--statement",
+        required=True,
+        metavar="FILE",
+        help="Write the canonical in-toto Statement v1 to FILE.",
+    )
+    attest_parser.add_argument(
+        "--bundle",
+        required=True,
+        metavar="FILE",
+        help="Write the Sigstore verification bundle to FILE.",
+    )
+    attest_parser.add_argument(
+        "--cosign",
+        default="cosign",
+        metavar="PATH",
+        help="Cosign executable to use for keyless signing (default: cosign).",
+    )
+    attest_parser.set_defaults(handler=_attest)
+
     verify_parser = commands.add_parser(
         "verify",
         help="Verify a current snapshot or live Codex runtime against a baseline.",
@@ -279,6 +413,80 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_parser.set_defaults(handler=_verify)
 
+    verify_attestation_parser = commands.add_parser(
+        "verify-attestation",
+        help=(
+            "Verify signer identity and baseline attestation before comparing "
+            "the current runtime."
+        ),
+    )
+    verify_attestation_parser.add_argument("baseline")
+    verify_attestation_parser.add_argument("current", nargs="?")
+    verify_attestation_parser.add_argument(
+        "--attestation",
+        required=True,
+        metavar="FILE",
+        help="Signed RuntimeTruth in-toto statement.",
+    )
+    verify_attestation_parser.add_argument(
+        "--bundle",
+        required=True,
+        metavar="FILE",
+        help="Sigstore bundle created when the attestation was signed.",
+    )
+    verify_attestation_parser.add_argument(
+        "--certificate-identity",
+        required=True,
+        metavar="IDENTITY",
+        help="Exact expected Sigstore certificate identity.",
+    )
+    verify_attestation_parser.add_argument(
+        "--certificate-oidc-issuer",
+        required=True,
+        metavar="URL",
+        help="Exact expected OIDC issuer for the signing identity.",
+    )
+    verify_attestation_parser.add_argument(
+        "--cosign",
+        default="cosign",
+        metavar="PATH",
+        help="Cosign executable to use for verification (default: cosign).",
+    )
+    verify_attestation_parser.add_argument(
+        "--codex",
+        metavar="PATH",
+        help="Collect a live Codex runtime from PATH instead of loading CURRENT.",
+    )
+    verify_attestation_parser.add_argument(
+        "--resolve-thread",
+        action="store_true",
+        help="Resolve an ephemeral Codex thread when verifying a live Codex runtime.",
+    )
+    verify_attestation_parser.add_argument(
+        "--resolve-mcp",
+        action="store_true",
+        help=(
+            "Probe thread-scoped MCP runtime state when verifying live Codex. "
+            "This may contact configured MCP servers or refresh authentication."
+        ),
+    )
+    verify_attestation_parser.add_argument(
+        "--protect",
+        action="append",
+        default=[],
+        metavar="SELECTOR",
+        help=(
+            "Only fail on drift in this evidence kind or exact field. "
+            "Repeat for multiple selectors; omit for strict full-snapshot verification."
+        ),
+    )
+    verify_attestation_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit a structured identity/baseline/runtime verification report.",
+    )
+    verify_attestation_parser.set_defaults(handler=_verify_attestation)
+
     return parser
 
 
@@ -293,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return handler(args)
-    except (CollectionError, DiffError) as exc:
+    except (AttestationError, CollectionError, DiffError) as exc:
         print(f"runtimetruth: error: {exc}", file=sys.stderr)
         return 1
 
