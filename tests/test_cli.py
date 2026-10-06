@@ -422,12 +422,12 @@ def test_digest_emits_canonical_sha256(monkeypatch, capsys) -> None:
     assert capsys.readouterr().out == f"sha256:{'a' * 64}\n"
 
 
-def test_attest_emits_digest_and_artifact_paths(monkeypatch, capsys) -> None:
+def test_attest_emits_digest_and_bundle_path(monkeypatch, capsys) -> None:
     baseline = str(_FIXTURES / "before.json")
 
     monkeypatch.setattr(
         "runtimetruth.cli.create_signed_attestation",
-        lambda baseline, *, statement_path, bundle_path, cosign: "b" * 64,
+        lambda baseline, *, bundle_path, cosign: "b" * 64,
     )
 
     assert (
@@ -435,8 +435,6 @@ def test_attest_emits_digest_and_artifact_paths(monkeypatch, capsys) -> None:
             [
                 "attest",
                 baseline,
-                "--statement",
-                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
             ]
@@ -446,35 +444,25 @@ def test_attest_emits_digest_and_artifact_paths(monkeypatch, capsys) -> None:
 
     assert capsys.readouterr().out == (
         f"BASELINE: sha256:{'b' * 64}\n"
-        "STATEMENT: baseline.intoto.json\n"
-        "BUNDLE: baseline.sigstore.json\n"
+        "ATTESTATION: baseline.sigstore.json\n"
     )
 
 
-def test_verify_attestation_pass_verifies_identity_before_runtime(
+def test_verify_attestation_pass_verifies_trust_before_runtime(
     monkeypatch,
     capsys,
 ) -> None:
     baseline = str(_FIXTURES / "before.json")
     events: list[str] = []
 
-    def verify_signature(*args, **kwargs):
-        events.append("identity")
-
-    def load_signed_statement(path):
-        events.append("statement")
-        return {"signed": True}
-
-    def validate_signed_statement(statement, snapshot):
-        events.append("baseline")
+    def verify_trust(*args, **kwargs):
+        events.append("trust")
         return "c" * 64
 
     monkeypatch.setattr(
-        "runtimetruth.cli.verify_statement_signature",
-        verify_signature,
+        "runtimetruth.cli.verify_signed_attestation",
+        verify_trust,
     )
-    monkeypatch.setattr("runtimetruth.cli.load_statement", load_signed_statement)
-    monkeypatch.setattr("runtimetruth.cli.validate_statement", validate_signed_statement)
 
     assert (
         main(
@@ -482,8 +470,6 @@ def test_verify_attestation_pass_verifies_identity_before_runtime(
                 "verify-attestation",
                 baseline,
                 baseline,
-                "--attestation",
-                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -495,7 +481,7 @@ def test_verify_attestation_pass_verifies_identity_before_runtime(
         == 0
     )
 
-    assert events == ["identity", "statement", "baseline"]
+    assert events == ["trust"]
     assert capsys.readouterr().out == (
         "IDENTITY: VERIFIED\n"
         "  certificate_identity: signer@example.com\n"
@@ -511,16 +497,8 @@ def test_verify_attestation_drift_preserves_exit_two(monkeypatch, capsys) -> Non
     current = str(_FIXTURES / "after.json")
 
     monkeypatch.setattr(
-        "runtimetruth.cli.verify_statement_signature",
-        lambda *args, **kwargs: None,
-    )
-    monkeypatch.setattr(
-        "runtimetruth.cli.load_statement",
-        lambda path: {"signed": True},
-    )
-    monkeypatch.setattr(
-        "runtimetruth.cli.validate_statement",
-        lambda statement, snapshot: "d" * 64,
+        "runtimetruth.cli.verify_signed_attestation",
+        lambda *args, **kwargs: "d" * 64,
     )
 
     assert (
@@ -529,8 +507,6 @@ def test_verify_attestation_drift_preserves_exit_two(monkeypatch, capsys) -> Non
                 "verify-attestation",
                 baseline,
                 current,
-                "--attestation",
-                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -558,16 +534,8 @@ def test_verify_attestation_json_report_includes_trust_result(
     baseline = str(_FIXTURES / "before.json")
 
     monkeypatch.setattr(
-        "runtimetruth.cli.verify_statement_signature",
-        lambda *args, **kwargs: None,
-    )
-    monkeypatch.setattr(
-        "runtimetruth.cli.load_statement",
-        lambda path: {"signed": True},
-    )
-    monkeypatch.setattr(
-        "runtimetruth.cli.validate_statement",
-        lambda statement, snapshot: "e" * 64,
+        "runtimetruth.cli.verify_signed_attestation",
+        lambda *args, **kwargs: "e" * 64,
     )
 
     assert (
@@ -576,8 +544,6 @@ def test_verify_attestation_json_report_includes_trust_result(
                 "verify-attestation",
                 baseline,
                 baseline,
-                "--attestation",
-                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -609,23 +575,16 @@ def test_verify_attestation_identity_failure_stops_before_runtime(
     capsys,
 ) -> None:
     baseline = str(_FIXTURES / "before.json")
-    current_loaded = False
 
     def fail_identity(*args, **kwargs):
         from runtimetruth.attestation import AttestationError
 
         raise AttestationError("identity mismatch")
 
-    def should_not_load(path):
-        nonlocal current_loaded
-        current_loaded = True
-        raise AssertionError("current snapshot must not be loaded")
-
     monkeypatch.setattr(
-        "runtimetruth.cli.verify_statement_signature",
+        "runtimetruth.cli.verify_signed_attestation",
         fail_identity,
     )
-    monkeypatch.setattr("runtimetruth.cli.load_statement", should_not_load)
 
     assert (
         main(
@@ -633,8 +592,6 @@ def test_verify_attestation_identity_failure_stops_before_runtime(
                 "verify-attestation",
                 baseline,
                 baseline,
-                "--attestation",
-                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -649,4 +606,3 @@ def test_verify_attestation_identity_failure_stops_before_runtime(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "identity mismatch" in captured.err
-    assert current_loaded is False
