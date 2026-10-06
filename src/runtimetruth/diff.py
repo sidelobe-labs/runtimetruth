@@ -255,3 +255,36 @@ def format_diff(result: SnapshotDiff) -> str:
             )
 
     return "\n".join(lines)
+
+
+def _report_value(value: DiffValue) -> dict[str, object]:
+    if isinstance(value, MissingValue):
+        return {"present": False}
+    return {
+        "present": True,
+        "value": value,
+    }
+
+
+def diff_to_dict(result: SnapshotDiff) -> dict[str, object]:
+    """Serialize one semantic diff without losing missing-vs-null information."""
+    changes: list[dict[str, object]] = []
+
+    for change in result.changes:
+        fields = [
+            {
+                "field": field.field,
+                "before": _report_value(field.before),
+                "after": _report_value(field.after),
+            }
+            for field in change.fields
+        ]
+        changes.append(
+            {
+                "kind": change.kind,
+                "status": change.status,
+                "fields": fields,
+            }
+        )
+
+    return {"changes": changes}

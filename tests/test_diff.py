@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from runtimetruth.diff import DiffError, diff_snapshots, format_diff, load_snapshot
+from runtimetruth.diff import DiffError, diff_snapshots, diff_to_dict, format_diff, load_snapshot
 from runtimetruth.model import EvidenceRecord, EvidenceSource, Snapshot, Target
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "snapshots"
@@ -365,3 +365,49 @@ def test_diff_selector_rejects_unknown_field() -> None:
             after,
             selectors=("git.repository.not_a_real_field",),
         )
+
+
+def test_diff_json_preserves_missing_vs_null() -> None:
+    source = EvidenceSource(collector="git", method="git rev-parse/status")
+    target = Target(kind="git.repository", identifier="/srv/agent")
+    before = Snapshot.capture(
+        target=target,
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="git.repository",
+                source=source,
+                data={"repository_root": "/srv/agent"},
+            ),
+        ),
+    )
+    after = Snapshot.capture(
+        target=target,
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="git.repository",
+                source=source,
+                data={
+                    "repository_root": "/srv/agent",
+                    "branch": None,
+                },
+            ),
+        ),
+    )
+
+    assert diff_to_dict(diff_snapshots(before, after)) == {
+        "changes": [
+            {
+                "kind": "git.repository",
+                "status": "changed",
+                "fields": [
+                    {
+                        "field": "branch",
+                        "before": {"present": False},
+                        "after": {"present": True, "value": None},
+                    }
+                ],
+            }
+        ]
+    }
