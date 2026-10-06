@@ -279,3 +279,70 @@ def test_verify_rejects_snapshot_and_live_codex_together(capsys) -> None:
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "either a current snapshot or --codex" in captured.err
+
+
+def test_verify_protect_ignores_unprotected_drift(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    assert (
+        main(
+            [
+                "verify",
+                baseline,
+                current,
+                "--protect",
+                "git.repository.branch",
+            ]
+        )
+        == 0
+    )
+
+    assert capsys.readouterr().out == "PASS: runtime matches baseline.\n"
+
+
+def test_verify_protect_reports_only_selected_drift(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    assert (
+        main(
+            [
+                "verify",
+                baseline,
+                current,
+                "--protect",
+                "git.repository.head_commit",
+            ]
+        )
+        == 2
+    )
+
+    output = capsys.readouterr().out
+    assert "CODE\n" in output
+    assert "head_commit:" in output
+    assert "dirty:" not in output
+    assert "SERVICE\n" not in output
+    assert "PROCESS\n" not in output
+
+
+def test_verify_protect_rejects_unknown_selector(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    assert (
+        main(
+            [
+                "verify",
+                baseline,
+                current,
+                "--protect",
+                "git.repository.not_a_real_field",
+            ]
+        )
+        == 1
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "does not match an evidence field" in captured.err
