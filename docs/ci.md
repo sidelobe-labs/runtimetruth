@@ -12,16 +12,22 @@ RuntimeTruth's verification command is designed to work as a normal CI gate. It 
 
 A CI runner can therefore use `runtimetruth verify` directly and let the process exit code gate the job.
 
-## Installation before the first tagged release
+## Installation
 
-RuntimeTruth is not yet published to PyPI. Until tagged releases exist, install from a pinned Git commit after the repository is public:
+For normal CI usage, install the released package explicitly:
+
+```bash
+python -m pip install "runtimetruth==0.2.0"
+```
+
+For workflows that intentionally validate an unreleased revision, pin the exact Git commit:
 
 ```bash
 python -m pip install \
   "git+https://github.com/sidelobe-labs/runtimetruth.git@<PINNED_COMMIT>"
 ```
 
-Do not install from an unpinned moving branch in a production gate. Once tagged releases exist, prefer a tagged or packaged release.
+Do not follow an unpinned moving branch in a verification gate.
 
 ## Strict baseline gate
 
@@ -67,6 +73,33 @@ runtimetruth verify \
 A selector can protect an entire evidence kind, such as `codex.instructions`, or one exact scalar field, such as `codex.thread.model`.
 
 Unknown selectors are errors rather than silent passes.
+
+## Persisted policy
+
+Repeated selectors can be stored in an explicit schema-v1 TOML file:
+
+```toml
+version = 1
+protect = [
+  "codex.thread.model",
+  "codex.thread.model_provider",
+  "codex.thread.approval_policy",
+  "codex.thread.sandbox",
+  "codex.instructions",
+]
+```
+
+Then invoke it explicitly:
+
+```bash
+runtimetruth verify \
+  .runtimetruth/baseline.json \
+  --codex "$GITHUB_WORKSPACE" \
+  --resolve-thread \
+  --policy .runtimetruth/policy.toml
+```
+
+RuntimeTruth does not auto-discover policy files. Direct `--protect` values extend and de-duplicate the policy list. The same policy option is supported by `verify-attestation`, but only after signer identity and baseline integrity checks succeed.
 
 ## Machine-readable report
 
@@ -138,7 +171,7 @@ Use a runner that actually contains the runtime being verified. A GitHub-hosted 
 
 ## Baseline handling
 
-A baseline is currently only a snapshot file selected by the caller. RuntimeTruth does not yet claim that it is signed, centrally approved or tamper-evident.
+A plain `verify` baseline is a snapshot selected by the caller. For stronger provenance, `verify-attestation` verifies the exact expected signer identity and canonical baseline digest before any runtime comparison or policy evaluation.
 
 Treat baseline updates like dependency-lockfile changes:
 
