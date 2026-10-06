@@ -12,6 +12,7 @@ The project stays narrow: **verify the effective runtime state of an AI agent an
 | GitOps desired-vs-live reconciliation | [Argo CD](https://argo-cd.readthedocs.io/en/latest/user-guide/diff-strategies/) | Compare desired and live Kubernetes state and identify out-of-sync resources | RuntimeTruth applies a related idea to agent runtime state, including a distinct resolved layer between declaration and live observation |
 | Agent tracing and evaluation | [Phoenix](https://arize.com/docs/phoenix/tracing) | Trace LLM calls, retrievals, tool executions and agent runs; evaluate behaviour | RuntimeTruth is about runtime identity and effective configuration, not request-level execution traces or output quality |
 | Endpoint AI / MCP inventory | [GitGuardian](https://docs.gitguardian.com/endpoint-protection/agent-and-mcp-inventory) | Discover installed AI agents, configured MCP servers and accessible tools/data on endpoints | RuntimeTruth binds agent-specific configuration evidence to a particular inspected runtime rather than becoming a fleet inventory product |
+| MCP contract testing | [mcpward](https://github.com/TsvetanG2/mcpward) | Black-box contract testing for MCP servers: schema/description drift, protocol checks, security heuristics, behavioural tests, latency budgets and CI reporting | RuntimeTruth does not test whether an MCP server contract is safe or backwards-compatible. It records the MCP capability surface visible to a particular inspected agent as one component of that agent's effective runtime identity |
 | MCP drift and enforcement | [MCPTrust](https://github.com/mcptrust/mcptrust) | Lock MCP capabilities, detect drift, pin artifacts and enforce policy through a runtime proxy | RuntimeTruth records MCP/tool state as evidence but does not proxy, firewall or enforce MCP traffic |
 | Build provenance and attestations | [SLSA](https://slsa.dev/spec/v1.2/provenance), [Sigstore](https://docs.sigstore.dev/cosign/verifying/attestation/) | Describe artifact provenance and provide signing / attestation primitives | RuntimeTruth should reuse established attestation primitives where possible rather than invent a new signing ecosystem |
 
@@ -83,3 +84,13 @@ Until a concrete workflow requires it, the project should avoid adding:
 - custom signing infrastructure
 
 The evidence model should continue to be tested through small, real operational workflows.
+
+## MCPWard boundary
+
+MCPWard and RuntimeTruth can reasonably appear in the same CI pipeline because they verify different objects.
+
+MCPWard asks whether an MCP server's contract changed or violates its configured checks. RuntimeTruth asks whether the inspected agent's effective runtime identity still matches the baseline selected for that agent.
+
+For example, an `AGENTS.md` instruction change or a different effective model can be RuntimeTruth drift while the MCP server contract remains completely unchanged. Conversely, MCPWard can classify a breaking input-schema or tool-description change in detail; RuntimeTruth deliberately does not duplicate that contract-testing logic.
+
+RuntimeTruth's `codex.mcp` evidence should therefore remain an agent-runtime identity signal, not grow into a second MCP contract-testing product.
