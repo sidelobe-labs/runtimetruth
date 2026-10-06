@@ -8,11 +8,21 @@ from typing import Literal
 
 from runtimetruth.model import EvidenceRecord, JsonScalar, Snapshot, SnapshotFormatError
 
-_SUPPORTED_KINDS = ("systemd.unit", "linux.process", "git.repository")
+_SUPPORTED_KINDS = (
+    "systemd.unit",
+    "linux.process",
+    "git.repository",
+    "codex.runtime",
+    "codex.config",
+    "codex.thread",
+)
 _SECTION_NAMES = {
     "systemd.unit": "SERVICE",
     "linux.process": "PROCESS",
     "git.repository": "CODE",
+    "codex.runtime": "CODEX RUNTIME",
+    "codex.config": "CODEX CONFIG",
+    "codex.thread": "CODEX THREAD",
 }
 
 
