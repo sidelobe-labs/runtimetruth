@@ -13,7 +13,7 @@ from runtimetruth.collectors import (
     collect_git_repository,
 )
 from runtimetruth.collectors.systemd import validate_systemd_unit_name
-from runtimetruth.diff import DiffError, diff_snapshots, format_diff, load_snapshot
+from runtimetruth.diff import DiffError, SnapshotDiff, diff_snapshots, format_diff, load_snapshot
 from runtimetruth.inspection import inspect_systemd_runtime
 from runtimetruth.model import Snapshot, Target
 
@@ -56,20 +56,33 @@ def _inspect_git(args: argparse.Namespace) -> int:
     return 0
 
 
-def _inspect_codex(args: argparse.Namespace) -> int:
+def _capture_codex_snapshot(
+    path: str,
+    *,
+    resolve_thread: bool,
+    resolve_mcp: bool,
+) -> Snapshot:
     evidence = collect_codex_runtime(
-        args.path,
-        resolve_thread=args.resolve_thread,
-        resolve_mcp=args.resolve_mcp,
+        path,
+        resolve_thread=resolve_thread,
+        resolve_mcp=resolve_mcp,
     )
     config = evidence[1]
     cwd = config.data["cwd"]
     if not isinstance(cwd, str):
         raise CollectionError("Codex working directory identity has an invalid type")
 
-    snapshot = Snapshot.capture(
+    return Snapshot.capture(
         target=Target(kind="codex.workspace", identifier=cwd),
         evidence=evidence,
+    )
+
+
+def _inspect_codex(args: argparse.Namespace) -> int:
+    snapshot = _capture_codex_snapshot(
+        args.path,
+        resolve_thread=args.resolve_thread,
+        resolve_mcp=args.resolve_mcp,
     )
     print(snapshot.to_json(pretty=args.pretty))
     return 0
@@ -82,11 +95,7 @@ def _diff(args: argparse.Namespace) -> int:
     return 0
 
 
-def _verify(args: argparse.Namespace) -> int:
-    baseline = load_snapshot(args.baseline)
-    current = load_snapshot(args.current)
-    result = diff_snapshots(baseline, current)
-
+def _render_verify(result: SnapshotDiff) -> int:
     if not result.changes:
         print("PASS: runtime matches baseline.")
         return 0
@@ -95,6 +104,26 @@ def _verify(args: argparse.Namespace) -> int:
     print()
     print(format_diff(result))
     return _VERIFY_DRIFT_EXIT
+
+
+def _verify(args: argparse.Namespace) -> int:
+    baseline = load_snapshot(args.baseline)
+
+    if args.current is not None and args.codex is not None:
+        raise DiffError("verify accepts either a current snapshot or --codex, not both")
+    if args.current is None and args.codex is None:
+        raise DiffError("verify requires a current snapshot or --codex")
+
+    if args.codex is not None:
+        current = _capture_codex_snapshot(
+            args.codex,
+            resolve_thread=args.resolve_thread,
+            resolve_mcp=args.resolve_mcp,
+        )
+    else:
+        current = load_snapshot(args.current)
+
+    return _render_verify(diff_snapshots(baseline, current))
 
 
 def _add_pretty_argument(parser: argparse.ArgumentParser) -> None:
@@ -173,10 +202,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_parser = commands.add_parser(
         "verify",
-        help="Verify a current snapshot against a baseline snapshot.",
+        help="Verify a current snapshot or live Codex runtime against a baseline.",
     )
     verify_parser.add_argument("baseline")
-    verify_parser.add_argument("current")
+    verify_parser.add_argument("current", nargs="?")
+    verify_parser.add_argument(
+        "--codex",
+        metavar="PATH",
+        help="Collect a live Codex runtime from PATH instead of loading CURRENT.",
+    )
+    verify_parser.add_argument(
+        "--resolve-thread",
+        action="store_true",
+        help="Resolve an ephemeral Codex thread when verifying a live Codex runtime.",
+    )
+    verify_parser.add_argument(
+        "--resolve-mcp",
+        action="store_true",
+        help=(
+            "Probe thread-scoped MCP runtime state when verifying live Codex. "
+            "This may contact configured MCP servers or refresh authentication."
+        ),
+    )
     verify_parser.set_defaults(handler=_verify)
 
     return parser
