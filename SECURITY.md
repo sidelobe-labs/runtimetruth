@@ -37,3 +37,10 @@ Security reports are especially useful for issues involving:
 - package or CI supply-chain issues
 
 RuntimeTruth does not currently provide a cryptographic trust guarantee for baseline files. A caller-selected baseline can be modified unless the caller protects it through separate repository or artifact controls.
+
+
+## Verification assurance
+
+A RuntimeTruth PASS result is not a security or compliance certification. It means only that the evidence selected for verification matched the caller-selected baseline under the comparison rules implemented by that RuntimeTruth version.
+
+See [docs/trust-model.md](docs/trust-model.md) for the exact assurance and baseline boundaries.
