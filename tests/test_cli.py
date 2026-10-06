@@ -346,3 +346,68 @@ def test_verify_protect_rejects_unknown_selector(capsys) -> None:
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "does not match an evidence field" in captured.err
+
+
+def test_verify_json_pass_report(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+
+    assert main(["verify", baseline, baseline, "--json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)
+    assert report == {
+        "report_schema_version": 1,
+        "status": "pass",
+        "target": {
+            "kind": "systemd.unit",
+            "identifier": "agent.service",
+        },
+        "protected": [],
+        "changes": [],
+    }
+
+
+def test_verify_json_drift_report_preserves_structure(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    assert (
+        main(
+            [
+                "verify",
+                baseline,
+                current,
+                "--protect",
+                "git.repository.head_commit",
+                "--json",
+            ]
+        )
+        == 2
+    )
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["report_schema_version"] == 1
+    assert report["status"] == "drift"
+    assert report["protected"] == ["git.repository.head_commit"]
+    assert report["target"] == {
+        "kind": "systemd.unit",
+        "identifier": "agent.service",
+    }
+    assert report["changes"] == [
+        {
+            "kind": "git.repository",
+            "status": "changed",
+            "fields": [
+                {
+                    "field": "head_commit",
+                    "before": {
+                        "present": True,
+                        "value": "1111111111111111111111111111111111111111",
+                    },
+                    "after": {
+                        "present": True,
+                        "value": "2222222222222222222222222222222222222222",
+                    },
+                }
+            ],
+        }
+    ]

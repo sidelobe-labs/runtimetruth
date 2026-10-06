@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Callable
 
@@ -13,7 +14,14 @@ from runtimetruth.collectors import (
     collect_git_repository,
 )
 from runtimetruth.collectors.systemd import validate_systemd_unit_name
-from runtimetruth.diff import DiffError, SnapshotDiff, diff_snapshots, format_diff, load_snapshot
+from runtimetruth.diff import (
+    DiffError,
+    SnapshotDiff,
+    diff_snapshots,
+    diff_to_dict,
+    format_diff,
+    load_snapshot,
+)
 from runtimetruth.inspection import inspect_systemd_runtime
 from runtimetruth.model import Snapshot, Target
 
@@ -95,7 +103,27 @@ def _diff(args: argparse.Namespace) -> int:
     return 0
 
 
-def _render_verify(result: SnapshotDiff) -> int:
+def _render_verify(
+    result: SnapshotDiff,
+    *,
+    target: Target,
+    selectors: tuple[str, ...],
+    json_output: bool,
+) -> int:
+    status = "drift" if result.changes else "pass"
+    exit_code = _VERIFY_DRIFT_EXIT if result.changes else 0
+
+    if json_output:
+        report = {
+            "report_schema_version": 1,
+            "status": status,
+            "target": target.to_dict(),
+            "protected": list(selectors),
+            **diff_to_dict(result),
+        }
+        print(json.dumps(report, separators=(",", ":"), sort_keys=True))
+        return exit_code
+
     if not result.changes:
         print("PASS: runtime matches baseline.")
         return 0
@@ -123,12 +151,16 @@ def _verify(args: argparse.Namespace) -> int:
     else:
         current = load_snapshot(args.current)
 
+    selectors = tuple(args.protect)
     return _render_verify(
         diff_snapshots(
             baseline,
             current,
-            selectors=tuple(args.protect),
-        )
+            selectors=selectors,
+        ),
+        target=baseline.target,
+        selectors=selectors,
+        json_output=args.json,
     )
 
 
@@ -239,6 +271,11 @@ def build_parser() -> argparse.ArgumentParser:
             "Only fail on drift in this evidence kind or exact field. "
             "Repeat for multiple selectors; omit for strict full-snapshot verification."
         ),
+    )
+    verify_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit a structured JSON PASS/DRIFT report.",
     )
     verify_parser.set_defaults(handler=_verify)
 
