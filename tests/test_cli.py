@@ -1,7 +1,10 @@
 import json
+from pathlib import Path
 
 from runtimetruth.cli import build_parser, main
 from runtimetruth.model import EvidenceRecord, EvidenceSource
+
+_FIXTURES = Path(__file__).parent / "fixtures" / "snapshots"
 
 
 def test_parser_has_expected_program_name() -> None:
@@ -76,3 +79,22 @@ def test_git_inspect_emits_snapshot_json(monkeypatch, capsys) -> None:
         "identifier": "/srv/agent",
     }
     assert payload["evidence"][0]["data"]["head_commit"] == "a" * 40
+
+
+def test_diff_command_renders_semantic_changes(capsys) -> None:
+    assert (
+        main(
+            [
+                "diff",
+                str(_FIXTURES / "before.json"),
+                str(_FIXTURES / "after.json"),
+            ]
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert "SERVICE\n" in output
+    assert "PROCESS\n" in output
+    assert "CODE\n" in output
+    assert "head_commit:" in output

@@ -1,7 +1,15 @@
 import json
 from datetime import UTC, datetime
 
-from runtimetruth.model import EvidenceRecord, EvidenceSource, Snapshot, Target
+import pytest
+
+from runtimetruth.model import (
+    EvidenceRecord,
+    EvidenceSource,
+    Snapshot,
+    SnapshotFormatError,
+    Target,
+)
 
 
 def test_snapshot_serialization_is_stable() -> None:
@@ -45,13 +53,38 @@ def test_snapshot_serialization_is_stable() -> None:
 
 
 def test_snapshot_rejects_naive_capture_time() -> None:
-    try:
+    with pytest.raises(ValueError, match="timezone-aware"):
         Snapshot.capture(
             captured_at=datetime(2026, 10, 6),
             target=Target(kind="systemd.unit", identifier="agent.service"),
             evidence=(),
         )
-    except ValueError as exc:
-        assert str(exc) == "captured_at must be timezone-aware"
-    else:
-        raise AssertionError("expected a timezone validation error")
+
+
+def test_snapshot_json_round_trip() -> None:
+    snapshot = Snapshot.capture(
+        captured_at=datetime(2026, 10, 6, 0, 0, tzinfo=UTC),
+        target=Target(kind="git.repository", identifier="/srv/agent"),
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="git.repository",
+                source=EvidenceSource(collector="git", method="git rev-parse/status"),
+                data={
+                    "repository_root": "/srv/agent",
+                    "branch": None,
+                    "dirty": False,
+                },
+            ),
+        ),
+    )
+
+    assert Snapshot.from_json(snapshot.to_json()) == snapshot
+
+
+def test_snapshot_parser_rejects_unknown_schema_version() -> None:
+    with pytest.raises(SnapshotFormatError, match="unsupported schema_version"):
+        Snapshot.from_json(
+            '{"schema_version":2,"captured_at":"x","target":{},'
+            '"evidence":[]}'
+        )
