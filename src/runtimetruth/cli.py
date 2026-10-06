@@ -55,7 +55,10 @@ def _inspect_git(args: argparse.Namespace) -> int:
 
 
 def _inspect_codex(args: argparse.Namespace) -> int:
-    evidence = collect_codex_runtime(args.path)
+    evidence = collect_codex_runtime(
+        args.path,
+        resolve_thread=args.resolve_thread,
+    )
     config = evidence[1]
     cwd = config.data["cwd"]
     if not isinstance(cwd, str):
@@ -123,6 +126,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inspect effective Codex runtime configuration for a working directory.",
     )
     codex_parser.add_argument("path", nargs="?", default=".")
+    codex_parser.add_argument(
+        "--resolve-thread",
+        action="store_true",
+        help=(
+            "Start and delete an ephemeral Codex thread to record effective "
+            "thread settings without starting a turn."
+        ),
+    )
     _add_pretty_argument(codex_parser)
     codex_parser.set_defaults(handler=_inspect_codex)
 

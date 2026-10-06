@@ -123,12 +123,100 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
         process.wait(timeout=1.0)
 
 
-def _query_effective_config(
+def _safe_json(value: object, *, field: str) -> str:
+    if not isinstance(value, (dict, list)):
+        raise CollectionError(f"codex thread/start returned invalid {field}")
+    return json.dumps(value, separators=(",", ":"), sort_keys=True)
+
+
+def _safe_config_value(field: str, value: object) -> JsonScalar:
+    if value is None or isinstance(value, (str, int, bool)):
+        return value
+
+    if field == "approval_policy" and isinstance(value, dict):
+        return json.dumps(value, separators=(",", ":"), sort_keys=True)
+
+    raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
+
+
+def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
+    thread = result.get("thread")
+    if not isinstance(thread, dict):
+        raise CollectionError("codex thread/start returned no thread object")
+
+    thread_id = thread.get("id")
+    if not isinstance(thread_id, str) or not thread_id:
+        raise CollectionError("codex thread/start returned no thread id")
+
+    data: dict[str, JsonScalar] = {}
+
+    scalar_fields = {
+        "model": "model",
+        "modelProvider": "model_provider",
+        "reasoningEffort": "reasoning_effort",
+        "cwd": "cwd",
+    }
+    for source_field, output_field in scalar_fields.items():
+        value = result.get(source_field)
+        if value is not None and not isinstance(value, (str, int, bool)):
+            raise CollectionError(
+                f"codex thread/start returned invalid {source_field}"
+            )
+        data[output_field] = value
+
+    approval_policy = result.get("approvalPolicy")
+    if approval_policy is None or isinstance(approval_policy, (str, int, bool)):
+        data["approval_policy"] = approval_policy
+    elif isinstance(approval_policy, dict):
+        data["approval_policy"] = json.dumps(
+            approval_policy,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    else:
+        raise CollectionError("codex thread/start returned invalid approvalPolicy")
+
+    sandbox = result.get("sandbox")
+    if sandbox is not None:
+        data["sandbox"] = _safe_json(sandbox, field="sandbox")
+
+    instruction_sources = result.get("instructionSources")
+    if instruction_sources is not None:
+        if not isinstance(instruction_sources, list) or not all(
+            isinstance(item, str) for item in instruction_sources
+        ):
+            raise CollectionError(
+                "codex thread/start returned invalid instructionSources"
+            )
+        data["instruction_sources"] = json.dumps(
+            instruction_sources,
+            separators=(",", ":"),
+        )
+
+    cli_version = thread.get("cliVersion")
+    if cli_version is not None:
+        if not isinstance(cli_version, str):
+            raise CollectionError("codex thread/start returned invalid thread cliVersion")
+        data["cli_version"] = cli_version
+
+    return EvidenceRecord(
+        plane="resolved",
+        kind="codex.thread",
+        source=EvidenceSource(
+            collector="codex",
+            method="app-server thread/start",
+        ),
+        data=data,
+    )
+
+
+def _query_codex_state(
     binary: Path,
     cwd: Path,
     *,
     timeout: float,
-) -> dict[str, object]:
+    resolve_thread: bool,
+) -> tuple[dict[str, object], EvidenceRecord | None]:
     try:
         process = subprocess.Popen(
             [str(binary), "app-server"],
@@ -154,6 +242,7 @@ def _query_effective_config(
     )
     reader.start()
     deadline = time.monotonic() + timeout
+    thread_id: str | None = None
 
     try:
         _send_message(
@@ -194,26 +283,65 @@ def _query_effective_config(
                 },
             },
         )
-        result = _read_response(output, request_id=2, deadline=deadline)
+        config_result = _read_response(output, request_id=2, deadline=deadline)
+        config = config_result.get("config")
+        if not isinstance(config, dict):
+            raise CollectionError("codex config/read returned no config object")
+
+        thread_evidence: EvidenceRecord | None = None
+        if resolve_thread:
+            _send_message(
+                process.stdin,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "thread/start",
+                    "params": {
+                        "cwd": str(cwd),
+                        "ephemeral": True,
+                    },
+                },
+            )
+            thread_result = _read_response(output, request_id=3, deadline=deadline)
+            thread_evidence = _thread_evidence(thread_result)
+
+            thread = thread_result.get("thread")
+            if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
+                raise CollectionError("codex thread/start returned no thread id")
+            thread_id = thread["id"]
+
+            _send_message(
+                process.stdin,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "thread/delete",
+                    "params": {
+                        "threadId": thread_id,
+                    },
+                },
+            )
+            _read_response(output, request_id=4, deadline=deadline)
+            thread_id = None
+
+        return config, thread_evidence
     finally:
+        if thread_id is not None:
+            with contextlib.suppress(Exception):
+                _send_message(
+                    process.stdin,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 99,
+                        "method": "thread/delete",
+                        "params": {
+                            "threadId": thread_id,
+                        },
+                    },
+                )
         with contextlib.suppress(OSError):
             process.stdin.close()
         _stop_process(process)
-
-    config = result.get("config")
-    if not isinstance(config, dict):
-        raise CollectionError("codex config/read returned no config object")
-    return config
-
-
-def _safe_config_value(field: str, value: object) -> JsonScalar:
-    if value is None or isinstance(value, (str, int, bool)):
-        return value
-
-    if field == "approval_policy" and isinstance(value, dict):
-        return json.dumps(value, separators=(",", ":"), sort_keys=True)
-
-    raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
 
 
 def collect_codex_runtime(
@@ -221,8 +349,9 @@ def collect_codex_runtime(
     *,
     codex_binary: str | None = None,
     timeout: float = 5.0,
-) -> tuple[EvidenceRecord, EvidenceRecord]:
-    """Collect live Codex identity and its effective config for one working directory."""
+    resolve_thread: bool = False,
+) -> tuple[EvidenceRecord, ...]:
+    """Collect Codex runtime/config evidence and optional effective thread state."""
     requested_cwd = Path(cwd).expanduser()
     if not requested_cwd.exists():
         raise CollectionError(f"Codex working directory does not exist: {cwd!r}")
@@ -232,7 +361,12 @@ def collect_codex_runtime(
     resolved_cwd = requested_cwd.resolve()
     binary = _resolve_codex_binary(codex_binary)
     version = _run_codex_version(binary, timeout=timeout)
-    config = _query_effective_config(binary, resolved_cwd, timeout=timeout)
+    config, thread = _query_codex_state(
+        binary,
+        resolved_cwd,
+        timeout=timeout,
+        resolve_thread=resolve_thread,
+    )
 
     config_data: dict[str, JsonScalar] = {
         "cwd": str(resolved_cwd),
@@ -263,4 +397,8 @@ def collect_codex_runtime(
         ),
         data=config_data,
     )
-    return runtime, effective_config
+
+    records = [runtime, effective_config]
+    if thread is not None:
+        records.append(thread)
+    return tuple(records)
