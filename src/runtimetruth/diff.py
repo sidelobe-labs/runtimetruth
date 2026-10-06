@@ -15,6 +15,7 @@ _SUPPORTED_KINDS = (
     "codex.runtime",
     "codex.config",
     "codex.thread",
+    "codex.instructions",
 )
 _SECTION_NAMES = {
     "systemd.unit": "SERVICE",
@@ -23,6 +24,7 @@ _SECTION_NAMES = {
     "codex.runtime": "CODEX RUNTIME",
     "codex.config": "CODEX CONFIG",
     "codex.thread": "CODEX THREAD",
+    "codex.instructions": "CODEX INSTRUCTIONS",
 }
 
 

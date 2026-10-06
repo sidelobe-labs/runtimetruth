@@ -110,10 +110,22 @@ def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys)
             "cwd": "/srv/agent",
         },
     )
+    instructions = EvidenceRecord(
+        plane="live",
+        kind="codex.instructions",
+        source=EvidenceSource(
+            collector="filesystem",
+            method="sha256 Codex thread instructionSources",
+        ),
+        data={
+            "source_count": 1,
+            "source:/srv/agent/AGENTS.md": "sha256:" + "a" * 64,
+        },
+    )
 
     def fake_collect(path: str, *, resolve_thread: bool = False):
         if resolve_thread:
-            return runtime, config, thread
+            return runtime, config, thread, instructions
         return runtime, config
 
     monkeypatch.setattr(
@@ -134,6 +146,7 @@ def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys)
         ("codex.runtime", "live"),
         ("codex.config", "resolved"),
         ("codex.thread", "resolved"),
+        ("codex.instructions", "live"),
     ]
 
 

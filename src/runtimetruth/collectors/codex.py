@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import queue
 import shutil
@@ -139,7 +140,20 @@ def _safe_config_value(field: str, value: object) -> JsonScalar:
     raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
 
 
-def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
+def _instruction_sources(result: dict[str, object]) -> tuple[str, ...]:
+    value = result.get("instructionSources")
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise CollectionError("codex thread/start returned invalid instructionSources")
+    return tuple(value)
+
+
+def _thread_evidence(
+    result: dict[str, object],
+    *,
+    instruction_sources: tuple[str, ...],
+) -> EvidenceRecord:
     thread = result.get("thread")
     if not isinstance(thread, dict):
         raise CollectionError("codex thread/start returned no thread object")
@@ -178,14 +192,9 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
     if sandbox is not None:
         data["sandbox"] = _safe_json(sandbox, field="sandbox")
 
-    instruction_sources = result.get("instructionSources")
-    if instruction_sources is not None:
-        if not isinstance(instruction_sources, list) or not all(
-            isinstance(item, str) for item in instruction_sources
-        ):
-            raise CollectionError("codex thread/start returned invalid instructionSources")
+    if "instructionSources" in result:
         data["instruction_sources"] = json.dumps(
-            instruction_sources,
+            list(instruction_sources),
             separators=(",", ":"),
         )
 
@@ -206,13 +215,54 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
     )
 
 
+def _sha256_file(path: Path) -> str | None:
+    digest = hashlib.sha256()
+
+    try:
+        with path.open("rb") as handle:
+            while chunk := handle.read(64 * 1024):
+                digest.update(chunk)
+    except OSError:
+        return None
+
+    return digest.hexdigest()
+
+
+def _instruction_file_evidence(
+    sources: tuple[str, ...],
+    *,
+    cwd: Path,
+) -> EvidenceRecord:
+    data: dict[str, JsonScalar] = {
+        "source_count": len(sources),
+    }
+
+    for source in sources:
+        reported_path = Path(source).expanduser()
+        observed_path = reported_path if reported_path.is_absolute() else cwd / reported_path
+        fingerprint = _sha256_file(observed_path)
+        data[f"source:{source}"] = (
+            f"sha256:{fingerprint}" if fingerprint is not None else "unavailable"
+        )
+
+    return EvidenceRecord(
+        plane="live",
+        kind="codex.instructions",
+        source=EvidenceSource(
+            collector="filesystem",
+            method="sha256 Codex thread instructionSources",
+        ),
+        data=data,
+    )
+
+
 def _query_codex_state(
     binary: Path,
     cwd: Path,
     *,
     timeout: float,
     resolve_thread: bool,
-) -> tuple[dict[str, object], EvidenceRecord | None]:
+) -> tuple[dict[str, object], EvidenceRecord | None, tuple[str, ...] | None]:
     try:
         process = subprocess.Popen(
             [str(binary), "app-server"],
@@ -284,6 +334,7 @@ def _query_codex_state(
             raise CollectionError("codex config/read returned no config object")
 
         thread_evidence: EvidenceRecord | None = None
+        instruction_sources: tuple[str, ...] | None = None
         if resolve_thread:
             _send_message(
                 process.stdin,
@@ -298,9 +349,13 @@ def _query_codex_state(
                 },
             )
             thread_result = _read_response(output, request_id=3, deadline=deadline)
-            thread_evidence = _thread_evidence(thread_result)
+            instruction_sources = _instruction_sources(thread_result)
+            thread_evidence = _thread_evidence(
+                thread_result,
+                instruction_sources=instruction_sources,
+            )
 
-        return config, thread_evidence
+        return config, thread_evidence, instruction_sources
     finally:
         with contextlib.suppress(OSError):
             process.stdin.close()
@@ -324,7 +379,7 @@ def collect_codex_runtime(
     resolved_cwd = requested_cwd.resolve()
     binary = _resolve_codex_binary(codex_binary)
     version = _run_codex_version(binary, timeout=timeout)
-    config, thread = _query_codex_state(
+    config, thread, instruction_sources = _query_codex_state(
         binary,
         resolved_cwd,
         timeout=timeout,
@@ -364,4 +419,10 @@ def collect_codex_runtime(
     records = [runtime, effective_config]
     if thread is not None:
         records.append(thread)
+        records.append(
+            _instruction_file_evidence(
+                instruction_sources or (),
+                cwd=resolved_cwd,
+            )
+        )
     return tuple(records)

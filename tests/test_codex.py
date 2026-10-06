@@ -1,3 +1,4 @@
+import hashlib
 import json
 import stat
 from pathlib import Path
@@ -6,6 +7,7 @@ import pytest
 
 from runtimetruth.collectors.codex import collect_codex_runtime
 from runtimetruth.collectors.errors import CollectionError
+from runtimetruth.model import EvidenceSource
 
 
 def _fake_codex(
@@ -139,45 +141,44 @@ def test_collector_uses_codex_effective_config_and_allowlist(tmp_path: Path) -> 
     assert "mcp-secret" not in serialized
 
 
-def test_collector_resolves_ephemeral_thread_without_persistence_or_turn(
-    tmp_path: Path,
-) -> None:
+def test_collector_fingerprints_effective_instruction_source(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
+    instructions_path = workspace / "AGENTS.md"
+    instructions_path.write_text("runtime truth instructions\n", encoding="utf-8")
     method_log = tmp_path / "methods.log"
     executable = _fake_codex(tmp_path, log_path=method_log)
 
-    runtime, config, thread = collect_codex_runtime(
+    runtime, config, thread, instructions = collect_codex_runtime(
         str(workspace),
         codex_binary=str(executable),
         resolve_thread=True,
     )
 
+    expected_hash = hashlib.sha256(instructions_path.read_bytes()).hexdigest()
+
     assert runtime.kind == "codex.runtime"
     assert config.kind == "codex.config"
     assert thread.plane == "resolved"
     assert thread.kind == "codex.thread"
-    assert thread.data == {
-        "model": "gpt-effective",
-        "model_provider": "openai",
-        "reasoning_effort": "high",
-        "cwd": str(workspace.resolve()),
-        "approval_policy": "on-request",
-        "sandbox": json.dumps(
-            {
-                "type": "workspaceWrite",
-                "writableRoots": [str(workspace.resolve())],
-                "networkAccess": False,
-            },
-            separators=(",", ":"),
-            sort_keys=True,
-        ),
-        "instruction_sources": json.dumps(
-            [str(workspace.resolve() / "AGENTS.md")],
-            separators=(",", ":"),
-        ),
-        "cli_version": "codex-cli 0.test",
+    assert thread.data["instruction_sources"] == json.dumps(
+        [str(instructions_path)],
+        separators=(",", ":"),
+    )
+
+    assert instructions.plane == "live"
+    assert instructions.kind == "codex.instructions"
+    assert instructions.source == EvidenceSource(
+        collector="filesystem",
+        method="sha256 Codex thread instructionSources",
+    )
+    assert instructions.data == {
+        "source_count": 1,
+        f"source:{instructions_path}": f"sha256:{expected_hash}",
     }
+
+    serialized = json.dumps(instructions.to_dict())
+    assert "runtime truth instructions" not in serialized
 
     methods = method_log.read_text(encoding="utf-8").splitlines()
     assert methods == [
@@ -188,6 +189,23 @@ def test_collector_resolves_ephemeral_thread_without_persistence_or_turn(
     ]
     assert "turn/start" not in methods
     assert "thread/delete" not in methods
+
+
+def test_collector_marks_missing_instruction_source_unavailable(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    executable = _fake_codex(tmp_path)
+
+    _, _, _, instructions = collect_codex_runtime(
+        str(workspace),
+        codex_binary=str(executable),
+        resolve_thread=True,
+    )
+
+    assert instructions.data == {
+        "source_count": 1,
+        f"source:{workspace / 'AGENTS.md'}": "unavailable",
+    }
 
 
 def test_collector_serializes_granular_approval_policy(tmp_path: Path) -> None:
