@@ -401,7 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_attestation_parser = commands.add_parser(
         "verify-attestation",
-        help=("Verify signer identity and baseline attestation before comparing the current runtime."),
+        help="Verify signed baseline identity before comparing the current runtime.",
     )
     verify_attestation_parser.add_argument("baseline")
     verify_attestation_parser.add_argument("current", nargs="?")
