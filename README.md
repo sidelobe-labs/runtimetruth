@@ -2,9 +2,9 @@
 
 **Verify what your AI agent is actually running.**
 
-RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It is designed to compare declared, resolved, and live agent state so teams can detect unexpected changes in models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
+RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
 
-> Status: early private prototype. The first milestone is a local CLI and stable runtime snapshot format.
+> Status: early private prototype. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, and baseline verification have been validated against real local runtimes.
 
 ## Why
 
@@ -21,36 +21,81 @@ AI agents have more mutable runtime state than ordinary applications:
 
 A deployment can therefore look unchanged while the effective agent runtime has drifted.
 
-RuntimeTruth aims to answer:
+RuntimeTruth currently focuses on two questions:
 
-1. **What is this agent actually running right now?**
-2. **What changed since the approved baseline?**
-3. **Does the live runtime match policy?**
-4. **Can we produce a machine-readable attestation of that state?**
+1. **What runtime state can be established with explicit evidence?**
+2. **What changed since a known baseline?**
+
+Policy evaluation and portable attestation remain later phases.
 
 ## Origin
 
 RuntimeTruth grew out of operating self-hosted workers and noticing that source code and deployment configuration were not enough to answer a simple question: **what is actually running right now?**
 
-The project is being built from live evidence outward, starting with systemd, procfs, and Git identity before adding higher-level policy or agent-specific abstractions.
+The project is built from evidence outward. It started with systemd, procfs, and Git identity, then used the same model to inspect agent-specific Codex state.
 
 [Read the origin story](docs/origin.md).
 
-## Planned CLI
+## Current CLI
+
+Inspect a local target:
 
 ```console
-runtimetruth inspect <target>
-runtimetruth snapshot <target>
-runtimetruth diff <left> <right>
-runtimetruth verify <target>
-runtimetruth attest <target>
+runtimetruth inspect systemd <unit>
+runtimetruth inspect git <path>
+runtimetruth inspect codex <cwd>
+runtimetruth inspect codex <cwd> --resolve-thread
+runtimetruth inspect codex <cwd> --resolve-mcp
 ```
 
-The CLI surface is intentionally provisional until the snapshot schema is proven against real runtimes.
+Compare two snapshots:
 
-## Initial scope
+```console
+runtimetruth diff <before.json> <after.json>
+```
 
-The local Linux evidence core is intentionally small. The next validation target is agent-specific effective state, starting with a single Codex adapter rather than broadening into generic runtime observability.
+Verify a current snapshot against a baseline:
+
+```console
+runtimetruth verify <baseline.json> <current.json>
+```
+
+Or collect the current Codex runtime and verify it directly:
+
+```console
+runtimetruth verify <baseline.json> --codex <cwd> --resolve-thread
+runtimetruth verify <baseline.json> --codex <cwd> --resolve-mcp
+```
+
+Verification uses stable process exit codes:
+
+- `0` — runtime matches the baseline
+- `2` — semantic runtime drift detected
+- `1` — collection, input, or comparison error
+
+`--resolve-thread` creates an ephemeral Codex thread without starting a turn. `--resolve-mcp` additionally probes thread-scoped MCP runtime state and may contact configured MCP servers or refresh authentication; it does not call MCP tools.
+
+## Evidence currently collected
+
+The intentionally narrow implementation includes:
+
+- systemd unit/runtime state
+- procfs process identity
+- Git repository identity
+- Codex executable/version
+- Codex canonical resolved workspace configuration
+- effective state materialized for an ephemeral Codex thread
+- Codex-reported instruction source paths
+- SHA-256 fingerprints of those instruction source files without storing their plaintext
+- thread-scoped MCP server status and bounded tool-catalog fingerprints
+
+Each evidence record keeps its provenance and is classified as declared, resolved, or live where the source supports that claim.
+
+## Project boundary
+
+RuntimeTruth is not intended to become a generic process monitor, LLM trace backend, MCP proxy/firewall, GitOps controller, or hosted observability dashboard.
+
+The current focus is to make baseline verification useful and trustworthy before adding policy syntax, attestation, additional agent adapters, or cloud features.
 
 See:
 
@@ -69,6 +114,7 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ruff check .
+ruff format --check .
 pytest
 ```
 
