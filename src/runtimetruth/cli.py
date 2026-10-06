@@ -123,7 +123,13 @@ def _verify(args: argparse.Namespace) -> int:
     else:
         current = load_snapshot(args.current)
 
-    return _render_verify(diff_snapshots(baseline, current))
+    return _render_verify(
+        diff_snapshots(
+            baseline,
+            current,
+            selectors=tuple(args.protect),
+        )
+    )
 
 
 def _add_pretty_argument(parser: argparse.ArgumentParser) -> None:
@@ -222,6 +228,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Probe thread-scoped MCP runtime state when verifying live Codex. "
             "This may contact configured MCP servers or refresh authentication."
+        ),
+    )
+    verify_parser.add_argument(
+        "--protect",
+        action="append",
+        default=[],
+        metavar="SELECTOR",
+        help=(
+            "Only fail on drift in this evidence kind or exact field. "
+            "Repeat for multiple selectors; omit for strict full-snapshot verification."
         ),
     )
     verify_parser.set_defaults(handler=_verify)

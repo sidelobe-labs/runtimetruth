@@ -122,7 +122,57 @@ def _diff_record(before: EvidenceRecord, after: EvidenceRecord) -> tuple[FieldCh
     return tuple(changes)
 
 
-def diff_snapshots(before: Snapshot, after: Snapshot) -> SnapshotDiff:
+def _parse_selectors(
+    selectors: tuple[str, ...],
+    before: dict[str, EvidenceRecord],
+    after: dict[str, EvidenceRecord],
+) -> dict[str, set[str] | None]:
+    selected: dict[str, set[str] | None] = {}
+
+    for selector in selectors:
+        kind = next(
+            (
+                candidate
+                for candidate in sorted(_SUPPORTED_KINDS, key=len, reverse=True)
+                if selector == candidate or selector.startswith(f"{candidate}.")
+            ),
+            None,
+        )
+        if kind is None:
+            raise DiffError(f"unsupported protect selector: {selector!r}")
+
+        left = before.get(kind)
+        right = after.get(kind)
+        if left is None and right is None:
+            raise DiffError(f"protect selector {selector!r} is unavailable in both snapshots")
+
+        if selector == kind:
+            selected[kind] = None
+            continue
+
+        field = selector[len(kind) + 1 :]
+        available_fields = set(left.data if left is not None else ()) | set(
+            right.data if right is not None else ()
+        )
+        if not field or field not in available_fields:
+            raise DiffError(f"protect selector {selector!r} does not match an evidence field")
+
+        if kind in selected and selected[kind] is None:
+            continue
+        selected.setdefault(kind, set())
+        fields = selected[kind]
+        if fields is not None:
+            fields.add(field)
+
+    return selected
+
+
+def diff_snapshots(
+    before: Snapshot,
+    after: Snapshot,
+    *,
+    selectors: tuple[str, ...] = (),
+) -> SnapshotDiff:
     """Compare supported evidence records while ignoring capture time."""
     if before.target != after.target:
         raise DiffError(
@@ -133,9 +183,13 @@ def diff_snapshots(before: Snapshot, after: Snapshot) -> SnapshotDiff:
 
     before_records = _index_evidence(before)
     after_records = _index_evidence(after)
+    selected = _parse_selectors(selectors, before_records, after_records) if selectors else None
     changes: list[EvidenceChange] = []
 
     for kind in _SUPPORTED_KINDS:
+        if selected is not None and kind not in selected:
+            continue
+
         left = before_records.get(kind)
         right = after_records.get(kind)
 
@@ -149,6 +203,13 @@ def diff_snapshots(before: Snapshot, after: Snapshot) -> SnapshotDiff:
             continue
 
         field_changes = _diff_record(left, right)
+        if selected is not None:
+            selected_fields = selected[kind]
+            if selected_fields is not None:
+                field_changes = tuple(
+                    change for change in field_changes if change.field in selected_fields
+                )
+
         if field_changes:
             changes.append(
                 EvidenceChange(

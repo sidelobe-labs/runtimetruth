@@ -297,3 +297,71 @@ def test_codex_mcp_diff_reports_tool_catalog_change() -> None:
             '  server:docs:tools: ["search"] -> ["fetch","search"]',
         ]
     )
+
+
+def test_diff_selects_one_protected_field() -> None:
+    before = load_snapshot(str(_FIXTURES / "before.json"))
+    after = load_snapshot(str(_FIXTURES / "after.json"))
+
+    rendered = format_diff(
+        diff_snapshots(
+            before,
+            after,
+            selectors=("git.repository.head_commit",),
+        )
+    )
+
+    assert rendered == "\n".join(
+        [
+            "CODE",
+            "  head_commit: 1111111111111111111111111111111111111111 -> "
+            "2222222222222222222222222222222222222222",
+        ]
+    )
+
+
+def test_diff_selector_ignores_unprotected_changes() -> None:
+    before = load_snapshot(str(_FIXTURES / "before.json"))
+    after = load_snapshot(str(_FIXTURES / "after.json"))
+
+    result = diff_snapshots(
+        before,
+        after,
+        selectors=("git.repository.branch",),
+    )
+
+    assert result.changes == ()
+
+
+def test_diff_selector_can_protect_whole_evidence_kind() -> None:
+    before = load_snapshot(str(_FIXTURES / "before.json"))
+    after = load_snapshot(str(_FIXTURES / "after.json"))
+
+    rendered = format_diff(
+        diff_snapshots(
+            before,
+            after,
+            selectors=("git.repository",),
+        )
+    )
+
+    assert rendered == "\n".join(
+        [
+            "CODE",
+            "  dirty: false -> true",
+            "  head_commit: 1111111111111111111111111111111111111111 -> "
+            "2222222222222222222222222222222222222222",
+        ]
+    )
+
+
+def test_diff_selector_rejects_unknown_field() -> None:
+    before = load_snapshot(str(_FIXTURES / "before.json"))
+    after = load_snapshot(str(_FIXTURES / "after.json"))
+
+    with pytest.raises(DiffError, match="does not match an evidence field"):
+        diff_snapshots(
+            before,
+            after,
+            selectors=("git.repository.not_a_real_field",),
+        )
