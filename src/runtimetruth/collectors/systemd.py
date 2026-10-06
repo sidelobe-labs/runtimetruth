@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import subprocess
 
+from runtimetruth.collectors.errors import CollectionError
 from runtimetruth.model import EvidenceRecord, EvidenceSource, JsonScalar
 
 SYSTEMD_PROPERTIES = (
@@ -60,10 +61,6 @@ _INTEGER_PROPERTIES = {
 
 _BOOLEAN_PROPERTIES = {"DynamicUser"}
 _UNIT_NAME = re.compile(r"^[-A-Za-z0-9_.@:]+$")
-
-
-class CollectionError(RuntimeError):
-    """Raised when live evidence cannot be collected safely or reliably."""
 
 
 def validate_systemd_unit_name(unit: str) -> str:

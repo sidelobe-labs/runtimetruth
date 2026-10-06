@@ -7,11 +7,8 @@ import sys
 from collections.abc import Callable
 
 from runtimetruth import __version__
-from runtimetruth.collectors.systemd import (
-    CollectionError,
-    collect_systemd_unit,
-    validate_systemd_unit_name,
-)
+from runtimetruth.collectors import CollectionError, collect_git_repository
+from runtimetruth.collectors.systemd import collect_systemd_unit, validate_systemd_unit_name
 from runtimetruth.model import Snapshot, Target
 
 
@@ -34,6 +31,28 @@ def _inspect_systemd(args: argparse.Namespace) -> int:
     )
     print(snapshot.to_json(pretty=args.pretty))
     return 0
+
+
+def _inspect_git(args: argparse.Namespace) -> int:
+    evidence = collect_git_repository(args.path)
+    repository_root = evidence.data["repository_root"]
+    if not isinstance(repository_root, str):
+        raise CollectionError("git repository identity has an invalid type")
+
+    snapshot = Snapshot.capture(
+        target=Target(kind="git.repository", identifier=repository_root),
+        evidence=(evidence,),
+    )
+    print(snapshot.to_json(pretty=args.pretty))
+    return 0
+
+
+def _add_pretty_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print the JSON snapshot.",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -59,12 +78,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inspect one systemd-managed unit.",
     )
     systemd_parser.add_argument("unit", type=_systemd_unit)
-    systemd_parser.add_argument(
-        "--pretty",
-        action="store_true",
-        help="Pretty-print the JSON snapshot.",
-    )
+    _add_pretty_argument(systemd_parser)
     systemd_parser.set_defaults(handler=_inspect_systemd)
+
+    git_parser = inspect_targets.add_parser(
+        "git",
+        help="Inspect one local Git repository.",
+    )
+    git_parser.add_argument("path")
+    _add_pretty_argument(git_parser)
+    git_parser.set_defaults(handler=_inspect_git)
 
     return parser
 
