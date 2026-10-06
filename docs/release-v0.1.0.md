@@ -77,4 +77,4 @@ RuntimeTruth is currently local-first OSS:
 - no paid support plan
 - no SLA
 
-See [Trust model](trust-model.md), [Data handling](data-handling.md), [Security](../SECURITY.md) and [Support](../SUPPORT.md) before using RuntimeTruth as a CI gate.
+See [Trust model](https://github.com/sidelobe-labs/runtimetruth/blob/v0.1.0/docs/trust-model.md), [Data handling](https://github.com/sidelobe-labs/runtimetruth/blob/v0.1.0/docs/data-handling.md), [Security](https://github.com/sidelobe-labs/runtimetruth/blob/v0.1.0/SECURITY.md) and [Support](https://github.com/sidelobe-labs/runtimetruth/blob/v0.1.0/SUPPORT.md) before using RuntimeTruth as a CI gate.

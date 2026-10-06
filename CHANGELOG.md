@@ -4,9 +4,9 @@ All notable user-facing changes to RuntimeTruth are documented here.
 
 RuntimeTruth is pre-release software. Snapshot and report schemas are versioned independently from the package version, and compatibility guarantees may evolve before a stable 1.0 release.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-06
 
-First public pre-release candidate.
+First public pre-release.
 
 ### Added
 
