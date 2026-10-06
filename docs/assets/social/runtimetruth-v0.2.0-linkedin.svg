@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627" role="img" aria-labelledby="title desc">
+<title id="title">RuntimeTruth v0.2.0 — Sidelobe launch graphic</title>
+<desc id="desc">Promotional graphic for RuntimeTruth v0.2.0 using the official Sidelobe Signal dark logo and a four-stage verification flow.</desc>
+<defs>
+  <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#15243A"/>
+    <stop offset="1" stop-color="#101B2C"/>
+  </linearGradient>
+  <linearGradient id="terminal" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#0C1625"/>
+    <stop offset="1" stop-color="#0A1320"/>
+  </linearGradient>
+  <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+    <path d="M44 0H0V44" fill="none" stroke="#79B1FF" stroke-opacity="0.055" stroke-width="1"/>
+  </pattern>
+</defs>
+<rect width="1200" height="627" fill="#111C2D"/>
+<rect width="1200" height="627" fill="url(#grid)"/>
+<circle cx="1070" cy="-26" r="260" fill="#79B1FF" opacity="0.035"/>
+<circle cx="-90" cy="580" r="250" fill="#8FD18F" opacity="0.026"/>
+<g transform="translate(58 34) scale(0.175)">
+  <g transform="translate(40 45) scale(0.95)" fill="#8FD18F"><path fill-rule="evenodd" d="M233.82,212.22C228.62,208.79 224.20,201.17 218.88,186.49C217.19,181.82 215.41,177.76 214.93,177.46C214.44,177.16 167.12,176.88 109.77,176.84C39.94,176.80 4.84,176.43 3.50,175.74C0.75,174.31 0.03,173.01 0.02,169.40C0.01,167.56 0.81,165.58 2.00,164.50C3.88,162.80 7.01,162.69 51.25,162.72C77.24,162.75 101.37,162.48 104.87,162.13L111.25,161.50 117.44,147.00C125.33,128.53 127.93,123.45 134.82,113.03C141.77,102.52 151.77,92.37 158.96,88.55C163.23,86.28 166.11,85.55 172.15,85.20C179.14,84.79 180.47,85.03 186.18,87.72C194.22,91.50 201.33,97.93 207.71,107.20C215.14,117.98 218.69,125.60 225.08,144.50L230.84,161.50 237.00,162.11C240.40,162.44 244.58,162.42 246.31,162.07C249.92,161.33 249.78,161.79 252.98,141.00C256.10,120.66 261.98,94.19 269.17,68.00C272.43,56.13 279.66,37.49 285.13,26.85C293.98,9.61 307.09,-1.08 317.61,0.36C330.52,2.13 341.55,13.89 351.21,36.20C362.31,61.81 372.09,99.86 380.73,151.00L382.50,161.50 391.70,161.79L400.89,162.07 402.99,154.79C409.23,133.11 417.60,113.91 425.89,102.26C438.57,84.44 455.08,78.78 471.58,86.58C478.26,89.74 488.45,99.41 495.26,109.05C500.60,116.61 509.17,132.95 513.85,144.50C520.99,162.15 520.69,161.71 525.87,162.30C528.42,162.59 545.05,162.71 562.83,162.58C593.31,162.35 595.30,162.45 597.58,164.24C600.37,166.44 600.86,171.45 598.58,174.56C597.20,176.45 594.93,176.51 506.66,176.77L416.15,177.03 413.94,183.77C411.00,192.73 406.51,202.63 403.27,207.32C400.03,212.00 396.37,214.00 391.02,214.00C387.56,214.00 386.31,213.36 382.69,209.74C378.63,205.68 377.57,203.63 367.94,181.25L366.11,177.00 315.69,177.00L265.27,177.00 263.00,183.25C258.66,195.21 253.30,205.60 249.32,209.79C245.79,213.50 244.78,214.00 240.90,213.99C238.38,213.99 235.36,213.23 233.82,212.22Z"/></g>
+  <g transform="translate(655 75) scale(0.97826087)" fill="#79B1FF"><path fill-rule="evenodd" d="M56.19,173.00C44.15,171.30 31.30,166.92 21.50,161.17C13.78,156.65 3.70,148.72 1.62,145.54C0.01,143.09 0.11,142.92 10.17,130.43C15.77,123.49 20.98,117.56 21.75,117.27C22.54,116.96 24.96,118.48 27.32,120.77C32.72,125.99 42.78,132.40 49.54,134.93C71.97,143.32 95.00,137.16 95.00,122.76C95.00,113.45 88.85,109.58 63.00,102.60C30.50,93.83 18.97,86.81 11.26,71.12C8.67,65.85 8.50,64.68 8.50,52.45L8.50,39.40 12.42,31.45C18.97,18.20 30.32,9.05 46.50,3.99C55.47,1.18 73.83,0.21 84.73,1.97C99.78,4.40 117.05,12.03 126.69,20.51L131.43,24.69 129.55,27.60C127.78,30.33 117.02,44.28 112.39,49.84L110.27,52.38 106.31,49.24C100.36,44.53 88.21,38.39 82.00,36.94C64.25,32.81 48.74,38.08 47.31,48.74C46.06,58.05 52.70,62.41 78.14,68.94C114.00,78.16 126.79,86.58 133.03,105.08C134.86,110.49 135.14,113.22 134.83,122.50C134.49,132.85 134.24,133.99 130.55,141.81C123.89,155.92 110.07,166.49 92.30,171.06C83.32,173.38 65.61,174.33 56.19,173.00ZM243.00,172.44C220.76,167.65 202.69,148.99 197.44,125.39C195.06,114.67 195.85,98.39 199.28,87.76C202.24,78.60 209.40,66.68 214.96,61.65C236.92,41.82 267.80,39.87 287.34,57.07L292.00,61.17 292.00,30.58L292.00,0.00 310.00,0.00L328.00,0.00 328.00,85.50L328.00,171.00 310.00,171.00L292.00,171.00 292.00,164.42L292.00,157.83 287.34,161.93C275.71,172.17 259.53,176.00 243.00,172.44ZM274.58,138.61C280.71,135.76 286.14,130.39 289.22,124.13C291.14,120.24 291.50,117.90 291.49,109.50C291.48,100.55 291.19,98.95 288.74,94.28C283.26,83.85 275.87,78.86 264.87,78.19C254.76,77.58 248.38,79.82 242.58,86.02C236.62,92.39 233.83,98.67 233.23,107.06C232.18,121.66 240.27,135.12 252.75,139.57C258.92,141.78 268.71,141.35 274.58,138.61ZM389.07,172.98C364.74,167.83 348.32,153.34 340.37,130.00C338.88,125.62 338.50,121.55 338.50,110.00C338.50,96.77 338.74,94.79 341.26,87.46C348.11,67.54 362.99,53.43 383.50,47.40C391.29,45.12 407.14,45.10 415.89,47.37C437.58,53.00 454.22,70.99 458.52,93.42C460.33,102.88 460.49,117.11 458.80,118.80C457.91,119.69 447.06,120.00 416.18,120.00L374.75,120.00 375.34,122.97C376.77,130.10 384.69,138.45 392.50,141.05C394.70,141.78 399.77,142.35 403.77,142.30C412.48,142.20 419.18,139.34 426.84,132.45C429.56,130.00 432.13,128.00 432.54,128.00C433.74,128.00 453.00,147.27 453.00,148.47C453.00,150.42 441.67,160.78 435.50,164.48C426.46,169.89 415.63,172.95 403.65,173.48C398.07,173.72 391.51,173.50 389.07,172.98ZM424.00,96.13C424.00,93.54 420.57,86.15 418.21,83.67C410.14,75.17 394.82,73.60 384.93,80.27C381.31,82.71 376.52,89.78 375.44,94.25L374.78,97.00 399.39,97.00C412.93,97.00 424.00,96.61 424.00,96.13ZM571.50,173.37C566.78,172.64 555.98,168.96 550.50,166.22C535.10,158.52 523.11,143.26 518.54,125.54C516.58,117.97 516.57,102.43 518.52,94.19C522.66,76.62 534.50,61.64 551.07,53.03C561.40,47.65 569.31,45.75 581.50,45.73C593.55,45.71 601.56,47.57 612.50,52.93C633.13,63.04 645.34,82.01 646.72,106.09C648.51,137.26 629.45,163.68 599.50,171.55C593.41,173.15 576.97,174.21 571.50,173.37ZM590.22,139.95C592.27,139.39 595.87,137.46 598.22,135.67C610.16,126.59 614.15,109.72 607.70,95.67C604.37,88.43 600.76,84.52 594.64,81.53C579.57,74.15 564.36,79.40 556.90,94.56C554.07,100.30 553.72,101.97 553.75,109.38C553.79,118.45 555.56,123.93 560.54,130.47C566.99,138.92 579.53,142.93 590.22,139.95ZM719.67,173.02C713.07,171.82 701.33,166.02 696.62,161.62C694.49,159.63 692.58,158.00 692.37,158.00C692.17,158.00 692.00,160.94 692.00,164.52L692.00,171.05 674.25,170.77L656.50,170.50 656.50,85.50L656.50,0.50 674.25,0.23L692.00,-0.05 692.12,29.73C692.18,46.10 692.18,59.84 692.12,60.25C691.88,61.74 693.28,60.92 698.42,56.52C713.35,43.77 735.17,41.87 754.95,51.61C764.25,56.19 775.04,66.58 780.29,76.03C790.63,94.61 790.63,122.53 780.29,142.30C775.78,150.93 764.96,162.18 757.13,166.38C746.00,172.34 730.80,175.04 719.67,173.02ZM731.38,139.78C737.61,137.93 746.20,129.00 748.97,121.50C750.78,116.61 751.12,114.02 750.77,107.50C750.14,95.68 744.98,87.01 735.11,81.21C731.02,78.81 729.49,78.50 721.50,78.50C713.48,78.50 711.99,78.80 707.81,81.26C697.29,87.44 691.49,99.00 692.32,112.13C692.86,120.86 694.58,125.11 700.11,131.39C705.69,137.73 712.75,141.00 720.83,141.00C724.37,141.00 729.12,140.45 731.38,139.78ZM848.77,172.98C840.72,171.71 829.63,166.82 822.00,161.17C811.29,153.25 803.08,140.78 799.49,126.98C796.86,116.88 797.79,96.96 801.36,87.01C812.45,56.10 842.04,39.98 874.50,47.17C877.25,47.78 883.20,50.06 887.73,52.25C908.47,62.27 919.93,82.50 919.98,109.14C920.00,117.02 919.71,118.90 918.42,119.39C917.55,119.73 898.42,120.00 875.92,120.00C830.47,120.00 833.50,119.48 836.55,126.78C841.19,137.90 854.82,144.39 868.40,141.93C876.37,140.48 879.43,138.83 886.00,132.43L891.50,127.08 902.25,137.13C908.16,142.65 913.00,147.77 913.00,148.49C913.00,149.22 909.76,152.81 905.81,156.47C898.22,163.50 886.86,169.74 877.68,171.92C871.00,173.51 855.64,174.07 848.77,172.98ZM883.53,94.25C880.73,83.02 871.62,75.99 859.88,76.01C849.99,76.02 843.15,79.81 838.25,87.99C832.55,97.49 831.39,97.00 859.61,97.00L884.22,97.00 883.53,94.25ZM148.00,111.02L148.00,51.00L166.00,51.00L184.00,51.00 184.22,104.50C184.34,133.93 184.45,160.81 184.47,164.25L184.50,170.50 166.25,170.77L148.00,171.05 148.00,111.02ZM469.49,169.99C468.77,168.82 469.04,10.82 469.77,4.31L470.26,0.00L488.13,0.00L506.00,0.00 506.00,85.50L506.00,171.00 488.06,171.00C477.05,171.00 469.88,170.61 469.49,169.99ZM158.54,39.47C142.06,33.19 140.84,10.58 156.56,2.97C164.35,-0.80 174.11,0.39 180.36,5.87C184.37,9.39 186.23,14.92 185.82,22.11C185.50,27.87 184.98,29.46 182.36,32.69C180.67,34.79 177.89,37.32 176.19,38.32C171.95,40.80 163.48,41.35 158.54,39.47Z"/></g>
+</g>
+<g transform="translate(965 48)">
+  <rect width="168" height="34" rx="17" fill="#172841" stroke="#355477" stroke-width="1"/>
+  <circle cx="18" cy="17" r="4" fill="#8FD18F"/>
+  <text x="32" y="22" fill="#DCE7F5" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="1.1">OPEN SOURCE</text>
+</g>
+<g font-family="Inter, Arial, sans-serif">
+  <text x="64" y="181" fill="#F8FBFF" font-size="61" font-weight="600" letter-spacing="-2.1">Runtime<tspan fill="#8FD18F">Truth</tspan></text>
+  <g transform="translate(64 201)">
+    <rect width="96" height="34" rx="17" fill="#16283A" stroke="#8FD18F" stroke-opacity="0.68"/>
+    <text x="48" y="23" text-anchor="middle" fill="#A9E1AB" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="700">v0.2.0</text>
+  </g>
+  <text x="64" y="274" fill="#F2F6FB" font-size="31" font-weight="600" letter-spacing="-0.55">Know what is <tspan fill="#79B1FF">actually</tspan> running.</text>
+  <text x="64" y="309" fill="#B9C7D9" font-size="17.5" font-weight="400">Runtime verification and drift detection for AI agents.</text>
+  <text x="64" y="337" fill="#8FA2BA" font-size="15.5" font-weight="400">Baseline → canonical hash → signed attestation → identity + runtime verification.</text>
+</g>
+<g transform="translate(694 127)">
+  <rect width="440" height="204" rx="16" fill="url(#terminal)" stroke="#2B4564" stroke-width="1.2"/>
+  <rect width="440" height="38" rx="16" fill="#152338"/>
+  <rect y="22" width="440" height="16" fill="#152338"/>
+  <circle cx="21" cy="19" r="5" fill="#F06D6D"/>
+  <circle cx="40" cy="19" r="5" fill="#E5BC5B"/>
+  <circle cx="59" cy="19" r="5" fill="#79C983"/>
+  <text x="416" y="24" text-anchor="end" fill="#7F92AA" font-family="Inter, Arial, sans-serif" font-size="11">ai-services</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+    <text x="20" y="68" fill="#8FD18F">$</text>
+    <text x="38" y="68" fill="#EDF4FF">pip install runtimetruth==0.2.0</text>
+    <text x="20" y="96" fill="#9EB0C5">Successfully installed runtimetruth-0.2.0</text>
+    <text x="20" y="132" fill="#8FD18F">$</text>
+    <text x="38" y="132" fill="#EDF4FF">runtimetruth --version</text>
+    <text x="20" y="159" fill="#EDF4FF">runtimetruth 0.2.0</text>
+    <line x1="20" y1="176" x2="420" y2="176" stroke="#263B56"/>
+    <text x="20" y="195" fill="#79B1FF" font-size="11.8">inspect → digest → attest → verify-attestation</text>
+  </g>
+</g>
+<g transform="translate(64 380)" font-family="Inter, Arial, sans-serif">
+  <g transform="translate(0 0)">
+    <rect width="246" height="136" rx="14" fill="url(#surface)" stroke="#2B4564" stroke-width="1.1"/>
+    <text x="20" y="29" fill="#8FD18F" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" font-weight="700">01</text>
+    <text x="20" y="59" fill="#F5F8FC" font-size="22" font-weight="600">inspect</text>
+    <text x="20" y="84" fill="#AFC0D3" font-size="13.3">Collect runtime evidence</text>
+    <g transform="translate(190 28)" fill="none" stroke="#8FD18F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 0h23l10 10v31H2z"/><path d="M25 0v10h10"/><path d="M9 19h19M9 27h14" opacity="0.75"/></g>
+    <text x="20" y="117" fill="#6F849E" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5">runtime.json</text>
+  </g>
+  <g transform="translate(266 0)">
+    <rect width="246" height="136" rx="14" fill="url(#surface)" stroke="#2B4564" stroke-width="1.1"/>
+    <text x="20" y="29" fill="#8FD18F" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" font-weight="700">02</text>
+    <text x="20" y="59" fill="#F5F8FC" font-size="22" font-weight="600">digest</text>
+    <text x="20" y="84" fill="#AFC0D3" font-size="13.3">Canonical RFC 8785 hash</text>
+    <g transform="translate(190 28)" fill="none" stroke="#79B1FF" stroke-width="2.2" stroke-linecap="round"><path d="M10 0L5 41M28 0l-5 41M0 13h39M-2 28h39"/></g>
+    <text x="20" y="117" fill="#6F849E" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5">sha256:…</text>
+  </g>
+  <g transform="translate(532 0)">
+    <rect width="246" height="136" rx="14" fill="url(#surface)" stroke="#2B4564" stroke-width="1.1"/>
+    <text x="20" y="29" fill="#8FD18F" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" font-weight="700">03</text>
+    <text x="20" y="59" fill="#F5F8FC" font-size="22" font-weight="600">attest</text>
+    <text x="20" y="84" fill="#AFC0D3" font-size="13.3">Create signed attestation</text>
+    <g transform="translate(190 28)" fill="none" stroke="#8FD18F" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 0h23l10 10v31H2z"/><path d="M25 0v10h10"/><path d="M8 27c5-8 8 8 13 0 5-8 8 8 13 0"/></g>
+    <text x="20" y="117" fill="#6F849E" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5">attestation.json</text>
+  </g>
+  <g transform="translate(798 0)">
+    <rect width="246" height="136" rx="14" fill="url(#surface)" stroke="#2B4564" stroke-width="1.1"/>
+    <text x="20" y="29" fill="#8FD18F" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" font-weight="700">04</text>
+    <text x="20" y="57" fill="#F5F8FC" font-size="18.5" font-weight="600">verify-attestation</text>
+    <text x="20" y="84" fill="#AFC0D3" font-size="13.3">Verify identity + runtime</text>
+    <g transform="translate(190 27)" fill="none" stroke="#79B1FF" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 42C9 36 3 25 3 12V5L21 0l18 5v7c0 13-6 24-18 30z"/><path d="M12 20l6 6 12-13"/></g>
+    <text x="20" y="117" fill="#6F849E" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5">verified ✓</text>
+  </g>
+  <g stroke="#5B7697" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M250 68h12m-5-5 5 5-5 5"/>
+    <path d="M516 68h12m-5-5 5 5-5 5"/>
+    <path d="M782 68h12m-5-5 5 5-5 5"/>
+  </g>
+</g>
+<line x1="64" y1="548" x2="1134" y2="548" stroke="#2A405D" stroke-width="1"/>
+<g font-family="Inter, Arial, sans-serif">
+  <text x="64" y="584" fill="#AFC0D3" font-size="14">Open source · built at Sidelobe</text>
+  <text x="1134" y="584" text-anchor="end" fill="#79B1FF" font-size="14" font-weight="600">sidelobe.dev/open-source/runtimetruth</text>
+</g>
+</svg>
