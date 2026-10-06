@@ -17,6 +17,8 @@ from runtimetruth.diff import DiffError, diff_snapshots, format_diff, load_snaps
 from runtimetruth.inspection import inspect_systemd_runtime
 from runtimetruth.model import Snapshot, Target
 
+_VERIFY_DRIFT_EXIT = 2
+
 
 def _systemd_unit(value: str) -> str:
     try:
@@ -78,6 +80,21 @@ def _diff(args: argparse.Namespace) -> int:
     after = load_snapshot(args.after)
     print(format_diff(diff_snapshots(before, after)))
     return 0
+
+
+def _verify(args: argparse.Namespace) -> int:
+    baseline = load_snapshot(args.baseline)
+    current = load_snapshot(args.current)
+    result = diff_snapshots(baseline, current)
+
+    if not result.changes:
+        print("PASS: runtime matches baseline.")
+        return 0
+
+    print("DRIFT: runtime differs from baseline.")
+    print()
+    print(format_diff(result))
+    return _VERIFY_DRIFT_EXIT
 
 
 def _add_pretty_argument(parser: argparse.ArgumentParser) -> None:
@@ -153,6 +170,14 @@ def build_parser() -> argparse.ArgumentParser:
     diff_parser.add_argument("before")
     diff_parser.add_argument("after")
     diff_parser.set_defaults(handler=_diff)
+
+    verify_parser = commands.add_parser(
+        "verify",
+        help="Verify a current snapshot against a baseline snapshot.",
+    )
+    verify_parser.add_argument("baseline")
+    verify_parser.add_argument("current")
+    verify_parser.set_defaults(handler=_verify)
 
     return parser
 
