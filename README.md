@@ -2,6 +2,8 @@
 
 **Verify what your AI agent is actually running.**
 
+_An open-source Sidelobe project._
+
 RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
 
 > Status: pre-release. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, selective baseline verification and machine-readable verification reports have been validated against real local runtimes.
@@ -27,6 +29,14 @@ RuntimeTruth currently focuses on two questions:
 2. **What changed since a known baseline?**
 
 Policy evaluation and portable attestation remain later phases.
+
+## Project model
+
+RuntimeTruth is currently distributed as free, local-first open-source software. There is no RuntimeTruth hosted control plane, account system, telemetry service, paid support plan or SLA.
+
+A verification result is deliberately narrow: **PASS means the selected evidence matched the selected baseline.** It does not mean the agent is secure, compliant, safe, or correctly configured in ways RuntimeTruth did not inspect.
+
+See the [trust model](docs/trust-model.md), [data handling](docs/data-handling.md), [support policy](SUPPORT.md), and [MIT License](LICENSE) for the current project boundary.
 
 ## Origin
 
@@ -156,6 +166,9 @@ See:
 - [CI integration](docs/ci.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
+- [Trust model](docs/trust-model.md)
+- [Data handling](docs/data-handling.md)
+- [Support](SUPPORT.md)
 
 ## Development
 

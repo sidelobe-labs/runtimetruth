@@ -87,13 +87,14 @@ Implemented:
 - live Codex collection against a baseline
 - CI-friendly exit codes: `0` PASS, `2` DRIFT, `1` ERROR
 - semantic drift output using the existing diff engine
+- repeatable evidence-kind and exact-field protected invariants
+- versioned machine-readable PASS/DRIFT reports
 
 Next candidates, only when justified by a concrete workflow:
 
-- explicit local policy/invariant format
-- selective allowed drift rather than all-or-nothing baseline equality
-- machine-readable verification output for a concrete CI integration
-- high-signal policy violations
+- a persisted local invariant/policy file if repeated CLI selectors become cumbersome
+- high-signal policy violations that remain grounded in explicit evidence
+- additional machine-readable formats only when a concrete integration requires them
 
 **Current trust boundary:** a baseline is a file selected by the caller. It is not yet signed, centrally approved, or tamper-evident.
 
