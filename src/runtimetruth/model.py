@@ -17,6 +17,15 @@ class SnapshotFormatError(ValueError):
     """Raised when serialized snapshot data does not match the supported schema."""
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    payload: dict[str, object] = {}
+    for key, value in pairs:
+        if key in payload:
+            raise SnapshotFormatError(f"duplicate JSON object key: {key!r}")
+        payload[key] = value
+    return payload
+
+
 def _object(value: object, *, field: str) -> dict[str, object]:
     if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
         raise SnapshotFormatError(f"{field} must be an object")
@@ -191,7 +200,7 @@ class Snapshot:
     def from_json(cls, payload: str) -> Snapshot:
         """Parse one schema-v1 snapshot from JSON text."""
         try:
-            decoded = json.loads(payload)
+            decoded = json.loads(payload, object_pairs_hook=_reject_duplicate_keys)
         except json.JSONDecodeError as exc:
             raise SnapshotFormatError(f"invalid JSON: {exc.msg}") from exc
 
