@@ -30,6 +30,7 @@ from runtimetruth.diff import (
 )
 from runtimetruth.inspection import inspect_systemd_runtime
 from runtimetruth.model import Snapshot, Target
+from runtimetruth.policy import PolicyError, load_policy
 
 _VERIFY_DRIFT_EXIT = 2
 
@@ -160,6 +161,11 @@ def _render_verify(
     return _VERIFY_DRIFT_EXIT
 
 
+def _verification_selectors(args: argparse.Namespace) -> tuple[str, ...]:
+    policy_selectors = load_policy(args.policy).protect if args.policy is not None else ()
+    return tuple(dict.fromkeys((*policy_selectors, *args.protect)))
+
+
 def _verify(args: argparse.Namespace) -> int:
     baseline = load_snapshot(args.baseline)
 
@@ -177,7 +183,7 @@ def _verify(args: argparse.Namespace) -> int:
     else:
         current = load_snapshot(args.current)
 
-    selectors = tuple(args.protect)
+    selectors = _verification_selectors(args)
     return _render_verify(
         diff_snapshots(
             baseline,
@@ -216,7 +222,7 @@ def _verify_attestation(args: argparse.Namespace) -> int:
     else:
         current = load_snapshot(args.current)
 
-    selectors = tuple(args.protect)
+    selectors = _verification_selectors(args)
     result = diff_snapshots(
         baseline,
         current,
@@ -392,6 +398,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     verify_parser.add_argument(
+        "--policy",
+        metavar="FILE",
+        help=(
+            "Load protected selectors from an explicit schema-v1 TOML policy file. "
+            "CLI --protect selectors extend the file; no policy is auto-discovered."
+        ),
+    )
+    verify_parser.add_argument(
         "--protect",
         action="append",
         default=[],
@@ -463,6 +477,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     verify_attestation_parser.add_argument(
+        "--policy",
+        metavar="FILE",
+        help=(
+            "Load runtime selectors from an explicit schema-v1 TOML policy file. "
+            "The policy affects only the runtime semantic gate, never attestation trust checks."
+        ),
+    )
+    verify_attestation_parser.add_argument(
         "--protect",
         action="append",
         default=[],
@@ -493,7 +515,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return handler(args)
-    except (AttestationError, CollectionError, DiffError) as exc:
+    except (AttestationError, CollectionError, DiffError, PolicyError) as exc:
         print(f"runtimetruth: error: {exc}", file=sys.stderr)
         return 1
 

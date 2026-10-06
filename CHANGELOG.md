@@ -13,6 +13,8 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 - `runtimetruth attest` for canonical statement + keyless Sigstore bundle generation
 - `runtimetruth verify-attestation` for exact signer identity, baseline digest and runtime verification
 - machine-readable identity/baseline/runtime verification reports via `--json`
+- explicit schema-v1 TOML verification policies for persisted runtime selectors
+- policy support for both plain and signed-baseline runtime verification
 
 ### Security
 
