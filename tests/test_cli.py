@@ -427,7 +427,7 @@ def test_attest_emits_digest_and_bundle_path(monkeypatch, capsys) -> None:
 
     monkeypatch.setattr(
         "runtimetruth.cli.create_signed_attestation",
-        lambda baseline, *, bundle_path, cosign: "b" * 64,
+        lambda baseline, *, statement_path, bundle_path, cosign: "b" * 64,
     )
 
     assert (
@@ -435,6 +435,8 @@ def test_attest_emits_digest_and_bundle_path(monkeypatch, capsys) -> None:
             [
                 "attest",
                 baseline,
+                "--statement",
+                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
             ]
@@ -443,7 +445,9 @@ def test_attest_emits_digest_and_bundle_path(monkeypatch, capsys) -> None:
     )
 
     assert capsys.readouterr().out == (
-        f"BASELINE: sha256:{'b' * 64}\nATTESTATION: baseline.sigstore.json\n"
+        f"BASELINE: sha256:{'b' * 64}\n"
+        "STATEMENT: baseline.intoto.json\n"
+        "BUNDLE: baseline.sigstore.json\n"
     )
 
 
@@ -469,6 +473,8 @@ def test_verify_attestation_pass_verifies_trust_before_runtime(
                 "verify-attestation",
                 baseline,
                 baseline,
+                "--statement",
+                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -506,6 +512,8 @@ def test_verify_attestation_drift_preserves_exit_two(monkeypatch, capsys) -> Non
                 "verify-attestation",
                 baseline,
                 current,
+                "--statement",
+                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -543,6 +551,8 @@ def test_verify_attestation_json_report_includes_trust_result(
                 "verify-attestation",
                 baseline,
                 baseline,
+                "--statement",
+                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
@@ -591,6 +601,8 @@ def test_verify_attestation_identity_failure_stops_before_runtime(
                 "verify-attestation",
                 baseline,
                 baseline,
+                "--statement",
+                "baseline.intoto.json",
                 "--bundle",
                 "baseline.sigstore.json",
                 "--certificate-identity",
