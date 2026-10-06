@@ -1,24 +1,24 @@
-# Signed baseline attestations
+# Signed baseline attestation
 
-RuntimeTruth can bind a baseline snapshot to an identity-backed Sigstore attestation before using that baseline to verify a current runtime.
+RuntimeTruth can bind an approved baseline snapshot to a signer identity before using that baseline to verify a current runtime.
 
-The trust flow is intentionally explicit:
+The trust flow is deliberately explicit:
 
 ```text
 baseline snapshot
-   ↓ RFC 8785 JSON Canonicalization Scheme
+   ↓ RFC 8785 canonicalization
 canonical SHA-256 digest
    ↓ in-toto Statement v1
-RuntimeTruth predicate
-   ↓ DSSE + Sigstore keyless signing
+canonical attestation statement
+   ↓ Sigstore / cosign keyless signature
 Sigstore bundle
-   ↓ exact signer identity verification
-verified baseline
-   ↓ RuntimeTruth semantic comparison
-current runtime -> PASS / DRIFT / ERROR
+   ↓ verify signer identity + baseline digest
+trusted baseline
+   ↓ compare current runtime
+PASS / DRIFT / ERROR
 ```
 
-RuntimeTruth does not implement its own signature algorithm, key format, certificate authority or transparency log. It delegates signing and identity verification to Sigstore Cosign.
+RuntimeTruth does not implement custom cryptography. It uses RFC 8785 for JSON canonicalization, SHA-256 for baseline identity, in-toto Statement v1 for the signed claim, and Sigstore Cosign for identity-backed signing and verification.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ RuntimeTruth does not implement its own signature algorithm, key format, certifi
 - a recent `cosign` executable available on `PATH`
 - an OIDC identity that Sigstore can use for keyless signing
 
-For GitHub Actions, the signing job needs:
+For GitHub Actions, keyless signing normally requires:
 
 ```yaml
 permissions:
@@ -34,25 +34,25 @@ permissions:
   id-token: write
 ```
 
-A GitHub Actions signing identity is typically:
+A GitHub Actions signer identity is typically shaped like:
 
 ```text
 https://github.com/OWNER/REPOSITORY/.github/workflows/WORKFLOW@refs/heads/BRANCH
 ```
 
-with OIDC issuer:
+with issuer:
 
 ```text
 https://token.actions.githubusercontent.com
 ```
 
-## 1. Capture a baseline
+## 1. Capture and review a baseline
 
 ```bash
 runtimetruth inspect codex . --resolve-thread --pretty > baseline.json
 ```
 
-## 2. Review the canonical digest
+## 2. Compute the canonical baseline digest
 
 ```bash
 runtimetruth digest baseline.json
@@ -64,41 +64,42 @@ Example:
 sha256:7fd9...
 ```
 
-The digest is computed from RFC 8785 canonical JSON rather than the original file bytes. Pretty-printed and compact representations of the same supported snapshot therefore produce the same digest.
+The digest is computed from the parsed schema-v1 snapshot serialized with RFC 8785 JSON Canonicalization Scheme. JSON whitespace and object-key ordering therefore do not affect the digest.
 
-Array order remains part of the snapshot data and is not reordered by canonicalization.
+Duplicate JSON object keys are rejected before canonicalization.
 
 ## 3. Create a signed attestation
 
 ```bash
 runtimetruth attest baseline.json \
+  --statement baseline.intoto.json \
   --bundle baseline.sigstore.json
 ```
 
 RuntimeTruth:
 
-1. parses the baseline using the supported snapshot schema,
-2. writes the RFC 8785 canonical snapshot into a temporary file,
-3. builds the exact RuntimeTruth in-toto Statement v1, including the canonical SHA-256 subject digest and versioned RuntimeTruth predicate,
-4. canonicalizes that statement and asks `cosign attest-blob --statement` to DSSE-sign it,
-5. stores the signed material in the requested Sigstore bundle,
-6. removes temporary canonicalization inputs.
+1. parses the baseline snapshot,
+2. computes its RFC 8785 canonical SHA-256 digest,
+3. builds a minimal in-toto Statement v1 whose single subject is that digest,
+4. serializes the statement itself with RFC 8785,
+5. asks `cosign sign-blob` to sign those exact statement bytes,
+6. stores Sigstore verification material in the requested bundle.
 
-The signed statement uses predicate type:
+The signed statement predicate type is:
 
 ```text
 https://sidelobe.dev/runtimetruth/attestation/v1
 ```
 
-The RuntimeTruth predicate contains only:
+The predicate contains only:
 
 - RuntimeTruth attestation schema version
 - RuntimeTruth snapshot schema version
 - canonicalization identifier (`RFC8785`)
 
-The baseline contents are not duplicated into the predicate. The in-toto subject binds the attestation to the SHA-256 digest of the canonical baseline.
+The baseline contents are not duplicated into the statement predicate.
 
-RuntimeTruth refuses to overwrite an existing bundle.
+RuntimeTruth refuses to overwrite an existing statement or bundle.
 
 ## 4. Verify identity and runtime
 
@@ -108,6 +109,7 @@ Snapshot-to-snapshot:
 runtimetruth verify-attestation \
   baseline.json \
   current.json \
+  --statement baseline.intoto.json \
   --bundle baseline.sigstore.json \
   --certificate-identity "EXPECTED_IDENTITY" \
   --certificate-oidc-issuer "EXPECTED_ISSUER"
@@ -118,6 +120,7 @@ Live Codex:
 ```bash
 runtimetruth verify-attestation \
   baseline.json \
+  --statement baseline.intoto.json \
   --bundle baseline.sigstore.json \
   --certificate-identity "EXPECTED_IDENTITY" \
   --certificate-oidc-issuer "EXPECTED_ISSUER" \
@@ -127,19 +130,18 @@ runtimetruth verify-attestation \
 
 Verification fails closed.
 
-RuntimeTruth first asks `cosign verify-blob-attestation` to verify:
+RuntimeTruth first asks `cosign verify-blob` to verify the exact statement bytes against:
 
 - the Sigstore bundle
-- Fulcio certificate chain and transparency-log evidence supported by Cosign
 - the exact expected certificate identity
 - the exact expected OIDC issuer
-- the in-toto subject digest against the RFC 8785 canonical baseline
-- the expected RuntimeTruth predicate type
+- the Sigstore trust and transparency material supported by the installed Cosign version
 
-After Cosign succeeds, RuntimeTruth independently decodes the signed DSSE payload and checks:
+Only after Cosign succeeds, RuntimeTruth independently requires:
 
+- canonical RFC 8785 statement bytes
 - in-toto Statement v1
-- exactly one subject
+- exactly one RuntimeTruth baseline subject
 - SHA-256 subject digest equals the canonical baseline digest
 - RuntimeTruth predicate type
 - RuntimeTruth attestation schema version
@@ -147,7 +149,7 @@ After Cosign succeeds, RuntimeTruth independently decodes the signed DSSE payloa
 - canonicalization identifier
 - no unexpected root or predicate fields
 
-Only after those checks does RuntimeTruth collect/load the current runtime and run the normal semantic comparison.
+Only after those checks does RuntimeTruth load or collect the current runtime and run the normal semantic comparison.
 
 ## Output
 
@@ -185,7 +187,7 @@ Add `--json` to `verify-attestation` for a machine-readable trust/runtime report
 
 `verify-attestation` supports the same repeatable `--protect` selectors as normal verification.
 
-That does **not** weaken the signed baseline binding: the complete baseline snapshot is still canonicalized, hashed and bound to the signed attestation.
+That does **not** weaken the signed baseline binding: the complete baseline snapshot is canonicalized and its digest is bound to the signed statement.
 
 Selectors only control which semantic runtime differences fail the runtime gate after the baseline itself has been authenticated.
 
@@ -193,8 +195,8 @@ Selectors only control which semantic runtime differences fail the runtime gate 
 
 A successful attestation verification means:
 
-1. Cosign verified that the DSSE attestation was signed by the exact expected OIDC identity under the exact expected issuer.
-2. The signed in-toto subject binds to the canonical SHA-256 digest of the supplied baseline.
+1. Cosign verified that the exact statement bytes were signed by the expected OIDC identity under the expected issuer.
+2. RuntimeTruth verified that the signed in-toto subject binds to the canonical SHA-256 digest of the supplied baseline.
 3. The RuntimeTruth predicate matches the supported attestation schema.
 4. The current runtime matched the selected baseline invariants if the command returned PASS.
 
@@ -207,16 +209,28 @@ It does **not** establish that:
 - the signing identity itself was not compromised
 - a protected subset covers every security-relevant property
 
-Those higher-level decisions remain outside RuntimeTruth v0.1.x.
+Those higher-level decisions remain outside the current RuntimeTruth trust model.
+
+## Files that must travel together
+
+A portable attested baseline consists of:
+
+```text
+baseline.json
+baseline.intoto.json
+baseline.sigstore.json
+```
+
+The baseline is the state to compare against. The in-toto statement binds its canonical digest. The Sigstore bundle proves who signed the statement.
 
 ## Why RFC 8785
 
-Cryptographic hashes need an invariant representation. RuntimeTruth uses the standardized JSON Canonicalization Scheme defined by RFC 8785 rather than treating whitespace or JSON object key order as meaningful baseline changes.
+Cryptographic hashes need an invariant representation. RuntimeTruth uses the standardized JSON Canonicalization Scheme defined by RFC 8785 rather than treating whitespace or JSON object-key order as meaningful baseline changes.
 
-The implementation uses the `rfc8785` Python package for this security-sensitive serialization step instead of maintaining a project-specific canonicalizer.
+The implementation uses the `rfc8785` Python package for this security-sensitive serialization step rather than maintaining a project-specific canonicalizer.
 
 ## Why Sigstore
 
-Sigstore keyless signing binds an ephemeral signing key to an OIDC identity using short-lived certificates and records signing events in transparency infrastructure.
+Sigstore keyless signing binds an ephemeral signing key to an OIDC identity using short-lived certificates and transparency infrastructure.
 
 RuntimeTruth deliberately relies on Cosign for this layer rather than inventing a private-key storage scheme or signature format.
