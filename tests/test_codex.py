@@ -7,6 +7,7 @@ import pytest
 
 from runtimetruth.collectors.codex import collect_codex_runtime
 from runtimetruth.collectors.errors import CollectionError
+from runtimetruth.model import EvidenceSource
 
 
 def _fake_codex(
