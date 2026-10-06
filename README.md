@@ -4,11 +4,11 @@
 
 _An open-source Sidelobe project._
 
-[Project case study](https://sidelobe.dev/open-source/runtimetruth/) · [Engineering case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [v0.1.0 release](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.1.0)
+[Project case study](https://sidelobe.dev/open-source/runtimetruth/) · [Engineering case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [v0.2.0 release](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.0)
 
 RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
 
-> Status: [v0.1.0](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.1.0) public pre-release. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, selective baseline verification and machine-readable verification reports have been validated against real local runtimes.
+> Status: v0.2.0 pre-release. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, persisted verification policy and identity-backed signed-baseline verification have been validated in CI and against real local runtimes.
 
 ## Why
 
@@ -50,18 +50,31 @@ The project is built from evidence outward. It started with systemd, procfs, and
 
 ## Installation
 
-RuntimeTruth is not yet published to PyPI. For the v0.1.0 pre-release repository:
+For the CLI, use an isolated tool environment:
 
 ```bash
-git clone https://github.com/sidelobe-labs/runtimetruth.git
-cd runtimetruth
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install .
+pipx install runtimetruth
+```
+
+or:
+
+```bash
+uv tool install runtimetruth
+```
+
+Standard `pip` is also supported inside a virtual environment:
+
+```bash
+python -m pip install runtimetruth
+```
+
+Then verify the install:
+
+```bash
 runtimetruth --version
 ```
 
-For CI, pin the source revision rather than following a moving branch. See [CI integration](docs/ci.md).
+For CI workflows that require an exact source revision, pin the Git commit rather than following a moving branch. See [CI integration](docs/ci.md).
 
 ## Quick start
 
@@ -84,6 +97,24 @@ runtimetruth verify baseline.json --codex . --resolve-thread \
   --protect codex.thread.model \
   --protect codex.instructions
 ```
+
+Persist repeated selectors in an explicit TOML policy:
+
+```toml
+version = 1
+protect = [
+  "codex.thread.model",
+  "codex.thread.sandbox",
+  "codex.instructions",
+]
+```
+
+```bash
+runtimetruth verify baseline.json --codex . --resolve-thread \
+  --policy .runtimetruth/policy.toml
+```
+
+The same policy can be used with `verify-attestation`; signer identity and baseline binding are verified before policy evaluation.
 
 Add `--json` for a versioned machine-readable PASS/DRIFT report.
 
@@ -171,7 +202,7 @@ runtimetruth verify-attestation <baseline.json> [current.json] \
   --certificate-oidc-issuer <expected-issuer>
 ```
 
-`verify-attestation` can also use `--codex <cwd>`, `--resolve-thread`, `--resolve-mcp`, repeatable `--protect`, and `--json`.
+`verify-attestation` can also use `--codex <cwd>`, `--resolve-thread`, `--resolve-mcp`, `--policy <file>`, repeatable `--protect`, and `--json`.
 
 Creating or verifying identity-backed attestations requires a recent [Sigstore Cosign](https://docs.sigstore.dev/cosign/system_config/installation/) executable. Normal inspect/diff/verify commands do not require Cosign.
 
@@ -197,7 +228,7 @@ Each evidence record keeps its provenance and is classified as declared, resolve
 
 RuntimeTruth is not intended to become a generic process monitor, LLM trace backend, MCP proxy/firewall, GitOps controller, or hosted observability dashboard.
 
-The current focus is to make baseline verification useful and trustworthy before adding policy syntax, attestation, additional agent adapters, or cloud features.
+The current focus is external validation of the baseline, attestation and policy model before adding additional agent adapters or cloud features.
 
 See:
 
@@ -208,6 +239,7 @@ See:
 - [Architecture](docs/architecture.md)
 - [CI integration](docs/ci.md)
 - [Signed baseline attestations](docs/attestation.md)
+- [Verification policy](docs/policy.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Trust model](docs/trust-model.md)

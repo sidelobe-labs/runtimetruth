@@ -6,6 +6,10 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-06
+
+RuntimeTruth v0.2.0 adds an explicit trust chain for reviewed baselines, persisted runtime policy selectors, and the first normal PyPI distribution path.
+
 ### Added
 
 - RFC 8785 canonical baseline serialization and SHA-256 digest output via `runtimetruth digest`
@@ -15,12 +19,15 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 - machine-readable identity/baseline/runtime verification reports via `--json`
 - explicit schema-v1 TOML verification policies for persisted runtime selectors
 - policy support for both plain and signed-baseline runtime verification
+- PyPI release automation through GitHub OIDC Trusted Publishing
 
 ### Security
 
 - signed-attestation verification fails closed before current-runtime collection when signer identity or baseline binding cannot be verified
 - snapshot and attestation JSON parsing rejects duplicate object keys
 - RuntimeTruth validates the exact canonical in-toto statement after Cosign verifies its signature and signer identity
+- runtime policy selection is evaluated only after signed-baseline trust verification succeeds
+- the PyPI release job uses short-lived OIDC credentials instead of a long-lived package token
 
 ## [0.1.0] - 2026-10-06
 
@@ -58,7 +65,5 @@ First public pre-release.
 ### Known boundaries
 
 - Codex thread resolution observes a newly-created ephemeral thread, not an existing user's active thread
-- baseline files are caller-selected and are not signed or tamper-evident
 - PASS is not a security or compliance certification
 - RuntimeTruth does not classify MCP contract compatibility; MCP server contract testing is intentionally outside the product boundary
-- no PyPI package or hosted service is included in this milestone
