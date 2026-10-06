@@ -13,7 +13,6 @@ def _fake_codex(
     *,
     malformed_config: bool = False,
     log_path: Path | None = None,
-    cleanup_error: bool = False,
 ) -> Path:
     executable = tmp_path / "codex"
     config_result = (
@@ -37,12 +36,6 @@ def _fake_codex(
         }"""
     )
     method_log = repr(str(log_path)) if log_path is not None else "None"
-    delete_response = (
-        '{"jsonrpc": "2.0", "id": message["id"], '
-        '"error": {"code": -1, "message": "cleanup failed"}}'
-        if cleanup_error
-        else '{"jsonrpc": "2.0", "id": message["id"], "result": {}}'
-    )
 
     executable.write_text(
         f"""#!/usr/bin/env python3
@@ -101,10 +94,7 @@ for line in sys.stdin:
                 ]
             }}
         }}), flush=True)
-    elif method == "thread/delete":
-        print(json.dumps({delete_response}), flush=True)
-        break
-    elif method == "turn/start":
+    elif method in ("thread/delete", "turn/start"):
         raise SystemExit(91)
 """,
         encoding="utf-8",
@@ -149,7 +139,9 @@ def test_collector_uses_codex_effective_config_and_allowlist(tmp_path: Path) -> 
     assert "mcp-secret" not in serialized
 
 
-def test_collector_resolves_ephemeral_thread_without_starting_turn(tmp_path: Path) -> None:
+def test_collector_resolves_ephemeral_thread_without_persistence_or_turn(
+    tmp_path: Path,
+) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     method_log = tmp_path / "methods.log"
@@ -193,22 +185,9 @@ def test_collector_resolves_ephemeral_thread_without_starting_turn(tmp_path: Pat
         "initialized",
         "config/read",
         "thread/start",
-        "thread/delete",
     ]
     assert "turn/start" not in methods
-
-
-def test_collector_reports_thread_cleanup_failure(tmp_path: Path) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-    executable = _fake_codex(tmp_path, cleanup_error=True)
-
-    with pytest.raises(CollectionError, match="request 4 failed"):
-        collect_codex_runtime(
-            str(workspace),
-            codex_binary=str(executable),
-            resolve_thread=True,
-        )
+    assert "thread/delete" not in methods
 
 
 def test_collector_serializes_granular_approval_policy(tmp_path: Path) -> None:

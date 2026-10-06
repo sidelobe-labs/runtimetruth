@@ -139,7 +139,7 @@ def _safe_config_value(field: str, value: object) -> JsonScalar:
     raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
 
 
-def _thread_id(result: dict[str, object]) -> str:
+def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
     thread = result.get("thread")
     if not isinstance(thread, dict):
         raise CollectionError("codex thread/start returned no thread object")
@@ -147,13 +147,6 @@ def _thread_id(result: dict[str, object]) -> str:
     thread_id = thread.get("id")
     if not isinstance(thread_id, str) or not thread_id:
         raise CollectionError("codex thread/start returned no thread id")
-    return thread_id
-
-
-def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
-    thread = result.get("thread")
-    if not isinstance(thread, dict):
-        raise CollectionError("codex thread/start returned no thread object")
 
     data: dict[str, JsonScalar] = {}
 
@@ -211,28 +204,6 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
         ),
         data=data,
     )
-
-
-def _delete_thread(
-    stdin: TextIO,
-    output: queue.Queue[str | None],
-    *,
-    thread_id: str,
-    request_id: int,
-    deadline: float,
-) -> None:
-    _send_message(
-        stdin,
-        {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": "thread/delete",
-            "params": {
-                "threadId": thread_id,
-            },
-        },
-    )
-    _read_response(output, request_id=request_id, deadline=deadline)
 
 
 def _query_codex_state(
@@ -327,32 +298,7 @@ def _query_codex_state(
                 },
             )
             thread_result = _read_response(output, request_id=3, deadline=deadline)
-            thread_id = _thread_id(thread_result)
-
-            try:
-                thread_evidence = _thread_evidence(thread_result)
-            except CollectionError:
-                try:
-                    _delete_thread(
-                        process.stdin,
-                        output,
-                        thread_id=thread_id,
-                        request_id=4,
-                        deadline=deadline,
-                    )
-                except CollectionError as cleanup_exc:
-                    raise CollectionError(
-                        "Codex thread probe failed and thread cleanup also failed"
-                    ) from cleanup_exc
-                raise
-
-            _delete_thread(
-                process.stdin,
-                output,
-                thread_id=thread_id,
-                request_id=4,
-                deadline=deadline,
-            )
+            thread_evidence = _thread_evidence(thread_result)
 
         return config, thread_evidence
     finally:
