@@ -9,8 +9,8 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 ### Added
 
 - RFC 8785 canonical baseline serialization and SHA-256 digest output via `runtimetruth digest`
-- identity-backed baseline attestations using in-toto Statement v1, DSSE and Sigstore Cosign
-- `runtimetruth attest` for keyless signed baseline bundles
+- identity-backed baseline attestations using canonical in-toto Statement v1 and Sigstore Cosign
+- `runtimetruth attest` for canonical statement + keyless Sigstore bundle generation
 - `runtimetruth verify-attestation` for exact signer identity, baseline digest and runtime verification
 - machine-readable identity/baseline/runtime verification reports via `--json`
 
@@ -18,7 +18,7 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 - signed-attestation verification fails closed before current-runtime collection when signer identity or baseline binding cannot be verified
 - snapshot and attestation JSON parsing rejects duplicate object keys
-- RuntimeTruth validates the signed in-toto payload after Cosign verifies the Sigstore bundle
+- RuntimeTruth validates the exact canonical in-toto statement after Cosign verifies its signature and signer identity
 
 ## [0.1.0] - 2026-10-06
 
