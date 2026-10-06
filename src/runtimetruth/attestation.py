@@ -38,21 +38,33 @@ def snapshot_sha256(snapshot: Snapshot) -> str:
     return hashlib.sha256(canonical_snapshot_bytes(snapshot)).hexdigest()
 
 
-def build_predicate(snapshot: Snapshot) -> dict[str, object]:
-    """Build the minimal RuntimeTruth predicate embedded in the in-toto statement."""
+def build_statement(snapshot: Snapshot) -> dict[str, object]:
+    """Build the exact in-toto Statement v1 that binds one canonical baseline."""
     return {
-        "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
-        "snapshot_schema_version": snapshot.schema_version,
-        "canonicalization": CANONICALIZATION,
+        "_type": STATEMENT_TYPE,
+        "subject": [
+            {
+                "name": "runtimetruth-baseline",
+                "digest": {
+                    "sha256": snapshot_sha256(snapshot),
+                },
+            }
+        ],
+        "predicateType": PREDICATE_TYPE,
+        "predicate": {
+            "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
+            "snapshot_schema_version": snapshot.schema_version,
+            "canonicalization": CANONICALIZATION,
+        },
     }
 
 
-def predicate_bytes(snapshot: Snapshot) -> bytes:
-    """Return RFC 8785 canonical bytes for the RuntimeTruth attestation predicate."""
+def statement_bytes(snapshot: Snapshot) -> bytes:
+    """Return RFC 8785 canonical bytes for the RuntimeTruth in-toto statement."""
     try:
-        return rfc8785.dumps(build_predicate(snapshot))
+        return rfc8785.dumps(build_statement(snapshot))
     except rfc8785.CanonicalizationError as exc:
-        raise AttestationError(f"predicate cannot be canonicalized with RFC 8785: {exc}") from exc
+        raise AttestationError(f"statement cannot be canonicalized with RFC 8785: {exc}") from exc
 
 
 def _write(path: Path, payload: bytes) -> None:
@@ -97,18 +109,16 @@ def create_signed_attestation(
     with tempfile.TemporaryDirectory(prefix="runtimetruth-attest-") as directory:
         root = Path(directory)
         canonical = root / "runtimetruth-baseline.json"
-        predicate = root / "predicate.json"
+        statement = root / "statement.json"
         _write(canonical, canonical_snapshot_bytes(baseline))
-        _write(predicate, predicate_bytes(baseline))
+        _write(statement, statement_bytes(baseline))
 
         result = subprocess.run(
             [
                 executable,
                 "attest-blob",
-                "--predicate",
-                str(predicate),
-                "--type",
-                PREDICATE_TYPE,
+                "--statement",
+                str(statement),
                 "--bundle",
                 str(bundle),
                 "--yes",
