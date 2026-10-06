@@ -274,6 +274,8 @@ def validate_statement(statement: dict[str, object], baseline: Snapshot) -> str:
     subject = _object(subjects[0], field="subject[0]")
     if set(subject) != {"name", "digest"}:
         raise AttestationError("attestation subject fields do not match RuntimeTruth schema v1")
+    if subject.get("name") != "runtimetruth-baseline":
+        raise AttestationError(f"unexpected attestation subject name: {subject.get('name')!r}")
 
     digest = _object(subject.get("digest"), field="subject[0].digest")
     if set(digest) != {"sha256"}:
