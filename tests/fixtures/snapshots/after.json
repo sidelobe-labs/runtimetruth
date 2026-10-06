@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-06T03:12:02Z",
+  "target": {
+    "kind": "systemd.unit",
+    "identifier": "agent.service"
+  },
+  "evidence": [
+    {
+      "plane": "live",
+      "kind": "systemd.unit",
+      "source": {
+        "collector": "systemd",
+        "method": "systemctl show"
+      },
+      "data": {
+        "unit_id": "agent.service",
+        "active_state": "active",
+        "sub_state": "running",
+        "main_pid": 4190,
+        "exec_main_pid": 4190,
+        "restart_count": 1,
+        "working_directory": "/srv/agent"
+      }
+    },
+    {
+      "plane": "live",
+      "kind": "linux.process",
+      "source": {
+        "collector": "procfs",
+        "method": "/proc/<pid>/{cwd,exe}"
+      },
+      "data": {
+        "pid": 4190,
+        "cwd": "/srv/agent",
+        "executable": "/usr/bin/python3"
+      }
+    },
+    {
+      "plane": "live",
+      "kind": "git.repository",
+      "source": {
+        "collector": "git",
+        "method": "git rev-parse/status"
+      },
+      "data": {
+        "repository_root": "/srv/agent",
+        "head_commit": "2222222222222222222222222222222222222222",
+        "branch": "main",
+        "detached": false,
+        "dirty": true
+      }
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from collections.abc import Callable
 from runtimetruth import __version__
 from runtimetruth.collectors import CollectionError, collect_git_repository
 from runtimetruth.collectors.systemd import validate_systemd_unit_name
+from runtimetruth.diff import DiffError, diff_snapshots, format_diff, load_snapshot
 from runtimetruth.inspection import inspect_systemd_runtime
 from runtimetruth.model import Snapshot, Target
 
@@ -46,6 +47,13 @@ def _inspect_git(args: argparse.Namespace) -> int:
         evidence=(evidence,),
     )
     print(snapshot.to_json(pretty=args.pretty))
+    return 0
+
+
+def _diff(args: argparse.Namespace) -> int:
+    before = load_snapshot(args.before)
+    after = load_snapshot(args.after)
+    print(format_diff(diff_snapshots(before, after)))
     return 0
 
 
@@ -91,6 +99,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_pretty_argument(git_parser)
     git_parser.set_defaults(handler=_inspect_git)
 
+    diff_parser = commands.add_parser(
+        "diff",
+        help="Compare two RuntimeTruth snapshots.",
+    )
+    diff_parser.add_argument("before")
+    diff_parser.add_argument("after")
+    diff_parser.set_defaults(handler=_diff)
+
     return parser
 
 
@@ -105,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return handler(args)
-    except CollectionError as exc:
+    except (CollectionError, DiffError) as exc:
         print(f"runtimetruth: error: {exc}", file=sys.stderr)
         return 1
 
