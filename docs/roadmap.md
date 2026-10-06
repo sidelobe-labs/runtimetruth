@@ -4,7 +4,7 @@ The roadmap is intentionally validation-driven. A phase should prove its data mo
 
 ## Current checkpoint
 
-RuntimeTruth v0.1.0 is public. Phases 0–4 are validated end to end on real Codex runtimes, including live verification, selective protected invariants, machine-readable reports and CI-friendly exit semantics.
+RuntimeTruth v0.2.0 is the current release milestone. Phases 0–5 now have a validated vertical slice: runtime inspection, semantic verification, persisted selectors, canonical baseline identity and identity-backed signed-baseline verification.
 
 The current implementation can:
 
@@ -16,23 +16,27 @@ The current implementation can:
 - semantically diff snapshots
 - verify snapshot-vs-snapshot baselines with stable PASS / DRIFT / ERROR exit codes
 - collect a live Codex runtime and verify it directly against a baseline
+- persist repeated runtime selectors in an explicit schema-v1 TOML policy
+- canonicalize and hash a reviewed baseline with RFC 8785 + SHA-256
+- bind that digest to a canonical in-toto statement signed with Sigstore/Cosign
+- verify exact signer identity and baseline binding before runtime policy evaluation
 
-Generic infrastructure expansion and additional agent adapters remain intentionally paused. The immediate post-v0.1.0 priority is distribution and external validation rather than surface-area growth.
+Generic infrastructure expansion and additional agent adapters remain intentionally paused. The immediate priority is PyPI distribution and external validation rather than surface-area growth.
 
-## Immediate post-v0.1.0 priorities
+## Immediate post-v0.2.0 priorities
 
 ### 1. Distribution and install friction
 
 Ship the existing CLI through normal Python distribution channels before adding new runtime features.
 
-Candidates:
+Implemented for v0.2.0:
 
-- publish RuntimeTruth to PyPI using trusted publishing rather than a long-lived API token
-- document `pipx`, `uv tool` and standard `pip` installation paths
-- smoke-test the published wheel from a clean environment
-- keep source-pinned installation documented for CI workflows that require an exact commit
+- GitHub OIDC Trusted Publishing workflow with no long-lived PyPI token
+- documented `pipx`, `uv tool` and standard `pip` installation paths
+- package build and clean-wheel smoke testing in CI
+- source-pinned installation retained for unreleased CI validation
 
-**Exit:** a new user can install the released CLI without cloning the repository.
+**Exit:** publish v0.2.0 to PyPI and verify a clean external install.
 
 ### 2. External validation
 
@@ -60,15 +64,11 @@ The Action must remain a thin integration layer, not a second verification engin
 
 ### 4. Verification hardening
 
-Only add policy syntax when repeated CLI selectors become a real usability problem.
+The first persisted policy slice is implemented: an explicit TOML file stores only protected runtime selectors and composes with direct `--protect` flags.
 
-Candidates:
+Next changes should be justified by real workflows rather than growing a policy DSL.
 
-- persisted local invariant file
-- clearer allowed-drift rules with the same explicit evidence semantics
-- additional structured output only for concrete integrations
-
-**Exit:** repeated production verification remains readable without weakening evidence or error semantics.
+**Exit:** repeated production verification remains readable without weakening evidence, attestation, or error semantics.
 
 ## Phase 0 — Bootstrap
 
@@ -141,13 +141,13 @@ Implemented:
 - repeatable evidence-kind and exact-field protected invariants
 - versioned machine-readable PASS/DRIFT reports
 
-Next candidates, only when justified by a concrete workflow:
+Implemented since v0.1.0:
 
-- a persisted local invariant/policy file if repeated CLI selectors become cumbersome
-- high-signal policy violations that remain grounded in explicit evidence
-- additional machine-readable formats only when a concrete integration requires them
+- explicit schema-v1 TOML policy files for repeated protected selectors
+- additive CLI `--protect` selectors with deterministic de-duplication
+- policy support in both plain and signed-baseline verification
 
-**Current trust boundary:** a baseline is a file selected by the caller. It is not yet signed, centrally approved, or tamper-evident.
+**Current trust boundary:** plain verification still trusts a caller-selected baseline. The attestation path can authenticate a canonical baseline digest against an exact expected signing identity; organizational approval semantics remain outside RuntimeTruth.
 
 **Status:** validated and released in v0.1.0.
 
