@@ -28,6 +28,14 @@ RuntimeTruth aims to answer:
 3. **Does the live runtime match policy?**
 4. **Can we produce a machine-readable attestation of that state?**
 
+## Origin
+
+RuntimeTruth grew out of operating self-hosted workers and noticing that source code and deployment configuration were not enough to answer a simple question: **what is actually running right now?**
+
+The project is being built from live evidence outward, starting with systemd, procfs, and Git identity before adding higher-level policy or agent-specific abstractions.
+
+[Read the origin story](docs/origin.md).
+
 ## Planned CLI
 
 ```console
@@ -46,6 +54,7 @@ The first implementation targets local Linux runtimes and systemd-managed agent 
 
 See:
 
+- [Origin](docs/origin.md)
 - [Vision](docs/vision.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture](docs/architecture.md)
