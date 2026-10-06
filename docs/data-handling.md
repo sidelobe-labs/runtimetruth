@@ -50,6 +50,15 @@ Some explicit probes invoke the inspected runtime, and that runtime may perform 
 
 RuntimeTruth does not call MCP tools during MCP status inspection.
 
+Attestation commands have an additional explicit network boundary:
+
+- `runtimetruth attest` invokes Sigstore Cosign for keyless signing; Cosign may contact an OIDC provider, Fulcio and Sigstore transparency/timestamp services
+- `runtimetruth verify-attestation` invokes Cosign verification and may use Sigstore trust-root or transparency infrastructure as required by the installed Cosign version
+- RuntimeTruth writes the RFC 8785 canonical baseline and attestation predicate only into temporary local files while invoking Cosign, then removes those temporary inputs
+- the requested Sigstore bundle remains under the caller's control and contains signing certificate/transparency metadata in addition to the signed attestation
+
+The canonical baseline contains the same snapshot data as the caller-provided baseline, only in a deterministic serialization. It should therefore be treated with the same sensitivity as the snapshot itself.
+
 ## Future hosted features
 
 If RuntimeTruth later gains an optional hosted component, that component must define its own data flow, retention, authentication and privacy boundary. The current local CLI should not be assumed to transmit data to such a future service.
