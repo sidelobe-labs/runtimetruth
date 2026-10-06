@@ -144,9 +144,7 @@ def _parse_selectors(
         left = before.get(kind)
         right = after.get(kind)
         if left is None and right is None:
-            raise DiffError(
-                f"protect selector {selector!r} is unavailable in both snapshots"
-            )
+            raise DiffError(f"protect selector {selector!r} is unavailable in both snapshots")
 
         if selector == kind:
             selected[kind] = None
@@ -157,9 +155,7 @@ def _parse_selectors(
             right.data if right is not None else ()
         )
         if not field or field not in available_fields:
-            raise DiffError(
-                f"protect selector {selector!r} does not match an evidence field"
-            )
+            raise DiffError(f"protect selector {selector!r} does not match an evidence field")
 
         if kind in selected and selected[kind] is None:
             continue
@@ -187,11 +183,7 @@ def diff_snapshots(
 
     before_records = _index_evidence(before)
     after_records = _index_evidence(after)
-    selected = (
-        _parse_selectors(selectors, before_records, after_records)
-        if selectors
-        else None
-    )
+    selected = _parse_selectors(selectors, before_records, after_records) if selectors else None
     changes: list[EvidenceChange] = []
 
     for kind in _SUPPORTED_KINDS:
@@ -215,9 +207,7 @@ def diff_snapshots(
             selected_fields = selected[kind]
             if selected_fields is not None:
                 field_changes = tuple(
-                    change
-                    for change in field_changes
-                    if change.field in selected_fields
+                    change for change in field_changes if change.field in selected_fields
                 )
 
         if field_changes:
