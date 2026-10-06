@@ -122,8 +122,35 @@ def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys)
             "source:/srv/agent/AGENTS.md": "sha256:" + "a" * 64,
         },
     )
+    mcp = EvidenceRecord(
+        plane="live",
+        kind="codex.mcp",
+        source=EvidenceSource(
+            collector="codex",
+            method="app-server mcpServerStatus/list",
+        ),
+        data={
+            "server_count": 1,
+            "server:docs:runtime_status": "connected",
+            "server:docs:auth_status": "unsupported",
+            "server:docs:plugin_id": None,
+            "server:docs:http_origin": "https://developers.openai.com",
+            "server:docs:tool_count": 1,
+            "server:docs:tool_names_included": True,
+            "server:docs:tools": '["search"]',
+            "server:docs:tool_catalog_status": "available",
+            "server:docs:tool_catalog_sha256": "sha256:" + "b" * 64,
+        },
+    )
 
-    def fake_collect(path: str, *, resolve_thread: bool = False):
+    def fake_collect(
+        path: str,
+        *,
+        resolve_thread: bool = False,
+        resolve_mcp: bool = False,
+    ):
+        if resolve_mcp:
+            return runtime, config, thread, instructions, mcp
         if resolve_thread:
             return runtime, config, thread, instructions
         return runtime, config
@@ -147,6 +174,16 @@ def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys)
         ("codex.config", "resolved"),
         ("codex.thread", "resolved"),
         ("codex.instructions", "live"),
+    ]
+
+    assert main(["inspect", "codex", "/srv/agent", "--resolve-mcp"]) == 0
+    mcp_probed = json.loads(capsys.readouterr().out)
+    assert [(item["kind"], item["plane"]) for item in mcp_probed["evidence"]] == [
+        ("codex.runtime", "live"),
+        ("codex.config", "resolved"),
+        ("codex.thread", "resolved"),
+        ("codex.instructions", "live"),
+        ("codex.mcp", "live"),
     ]
 
 

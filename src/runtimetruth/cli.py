@@ -58,6 +58,7 @@ def _inspect_codex(args: argparse.Namespace) -> int:
     evidence = collect_codex_runtime(
         args.path,
         resolve_thread=args.resolve_thread,
+        resolve_mcp=args.resolve_mcp,
     )
     config = evidence[1]
     cwd = config.data["cwd"]
@@ -130,8 +131,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--resolve-thread",
         action="store_true",
         help=(
-            "Start and delete an ephemeral Codex thread to record effective "
-            "thread settings without starting a turn."
+            "Start an ephemeral Codex thread to record effective thread settings "
+            "without starting a turn."
+        ),
+    )
+    codex_parser.add_argument(
+        "--resolve-mcp",
+        action="store_true",
+        help=(
+            "Probe thread-scoped MCP server/tool runtime state. This may contact "
+            "configured MCP servers or refresh authentication; no MCP tool is called."
         ),
     )
     _add_pretty_argument(codex_parser)
