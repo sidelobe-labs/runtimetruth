@@ -31,9 +31,7 @@ def _run_git(
         raise CollectionError("git timed out while inspecting the repository") from exc
 
     if completed.returncode not in allowed_returncodes:
-        raise CollectionError(
-            f"git command failed with exit status {completed.returncode}"
-        )
+        raise CollectionError(f"git command failed with exit status {completed.returncode}")
 
     return completed
 
