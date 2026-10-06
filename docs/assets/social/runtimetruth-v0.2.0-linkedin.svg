@@ -47,8 +47,8 @@
   <text x="416" y="24" text-anchor="end" fill="#7F92AA" font-family="Inter, Arial, sans-serif" font-size="11">ai-services</text>
   <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
     <text x="20" y="68" fill="#8FD18F">$</text>
-    <text x="38" y="68" fill="#EDF4FF">pip install runtimetruth==0.2.0</text>
-    <text x="20" y="96" fill="#9EB0C5">Successfully installed runtimetruth-0.2.0</text>
+    <text x="38" y="68" fill="#EDF4FF">pipx install runtimetruth==0.2.0</text>
+    <text x="20" y="96" fill="#9EB0C5">installed package runtimetruth 0.2.0</text>
     <text x="20" y="132" fill="#8FD18F">$</text>
     <text x="38" y="132" fill="#EDF4FF">runtimetruth --version</text>
     <text x="20" y="159" fill="#EDF4FF">runtimetruth 0.2.0</text>
