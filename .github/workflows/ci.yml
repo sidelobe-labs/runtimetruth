@@ -92,17 +92,20 @@ jobs:
           set -euo pipefail
 
           baseline="tests/fixtures/snapshots/before.json"
+          statement="${RUNNER_TEMP}/runtimetruth-baseline.intoto.json"
           bundle="${RUNNER_TEMP}/runtimetruth-baseline.sigstore.json"
           identity="https://github.com/${GITHUB_WORKFLOW_REF}"
 
           runtimetruth digest "${baseline}"
 
           runtimetruth attest "${baseline}" \
+            --statement "${statement}" \
             --bundle "${bundle}"
 
           runtimetruth verify-attestation \
             "${baseline}" \
             "${baseline}" \
+            --statement "${statement}" \
             --bundle "${bundle}" \
             --certificate-identity "${identity}" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
