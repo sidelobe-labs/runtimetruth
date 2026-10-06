@@ -443,8 +443,7 @@ def test_attest_emits_digest_and_bundle_path(monkeypatch, capsys) -> None:
     )
 
     assert capsys.readouterr().out == (
-        f"BASELINE: sha256:{'b' * 64}\n"
-        "ATTESTATION: baseline.sigstore.json\n"
+        f"BASELINE: sha256:{'b' * 64}\nATTESTATION: baseline.sigstore.json\n"
     )
 
 
