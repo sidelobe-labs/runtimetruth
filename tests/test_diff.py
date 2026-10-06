@@ -292,10 +292,7 @@ def test_codex_mcp_diff_reports_tool_catalog_change() -> None:
     assert format_diff(diff_snapshots(before, after)) == "\n".join(
         [
             "CODEX MCP",
-            "  server:docs:tool_catalog_sha256: sha256:"
-            + "a" * 64
-            + " -> sha256:"
-            + "b" * 64,
+            "  server:docs:tool_catalog_sha256: sha256:" + "a" * 64 + " -> sha256:" + "b" * 64,
             "  server:docs:tool_count: 1 -> 2",
             '  server:docs:tools: ["search"] -> ["fetch","search"]',
         ]
