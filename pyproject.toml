@@ -12,6 +12,9 @@ license = { text = "MIT" }
 authors = [
   { name = "Sidelobe Labs" }
 ]
+dependencies = [
+  "rfc8785==0.1.4",
+]
 keywords = ["ai-agents", "agent-security", "runtime", "drift-detection", "mcp"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
