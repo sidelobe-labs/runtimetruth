@@ -49,9 +49,7 @@ def _run_codex_version(binary: Path, *, timeout: float) -> str:
         raise CollectionError("codex --version timed out") from exc
 
     if completed.returncode != 0:
-        raise CollectionError(
-            f"codex --version failed with exit status {completed.returncode}"
-        )
+        raise CollectionError(f"codex --version failed with exit status {completed.returncode}")
 
     version = completed.stdout.strip()
     if not version:
@@ -81,9 +79,7 @@ def _read_response(
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise CollectionError(
-                f"codex app-server timed out waiting for response {request_id}"
-            )
+            raise CollectionError(f"codex app-server timed out waiting for response {request_id}")
 
         try:
             line = output.get(timeout=remaining)
@@ -93,9 +89,7 @@ def _read_response(
             ) from exc
 
         if line is None:
-            raise CollectionError(
-                f"codex app-server exited before response {request_id}"
-            )
+            raise CollectionError(f"codex app-server exited before response {request_id}")
 
         try:
             message = json.loads(line)
@@ -109,15 +103,11 @@ def _read_response(
 
         error = message.get("error")
         if error is not None:
-            raise CollectionError(
-                f"codex app-server request {request_id} failed: {error!r}"
-            )
+            raise CollectionError(f"codex app-server request {request_id} failed: {error!r}")
 
         result = message.get("result")
         if not isinstance(result, dict):
-            raise CollectionError(
-                f"codex app-server response {request_id} has no object result"
-            )
+            raise CollectionError(f"codex app-server response {request_id} has no object result")
         return result
 
 
@@ -223,9 +213,7 @@ def _safe_config_value(field: str, value: object) -> JsonScalar:
     if field == "approval_policy" and isinstance(value, dict):
         return json.dumps(value, separators=(",", ":"), sort_keys=True)
 
-    raise CollectionError(
-        f"codex config/read returned unsupported value type for {field!r}"
-    )
+    raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
 
 
 def collect_codex_runtime(
