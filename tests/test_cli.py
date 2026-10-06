@@ -101,21 +101,39 @@ def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys)
             "sandbox_mode": "workspace-write",
         },
     )
+    thread = EvidenceRecord(
+        plane="resolved",
+        kind="codex.thread",
+        source=EvidenceSource(collector="codex", method="app-server thread/start"),
+        data={
+            "model": "gpt-effective",
+            "cwd": "/srv/agent",
+        },
+    )
+
+    def fake_collect(path: str, *, resolve_thread: bool = False):
+        if resolve_thread:
+            return runtime, config, thread
+        return runtime, config
+
     monkeypatch.setattr(
         "runtimetruth.cli.collect_codex_runtime",
-        lambda path: (runtime, config),
+        fake_collect,
     )
 
     assert main(["inspect", "codex", "/srv/agent"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["target"] == {
-        "kind": "codex.workspace",
-        "identifier": "/srv/agent",
-    }
-    assert [(item["kind"], item["plane"]) for item in payload["evidence"]] == [
+    passive = json.loads(capsys.readouterr().out)
+    assert [(item["kind"], item["plane"]) for item in passive["evidence"]] == [
         ("codex.runtime", "live"),
         ("codex.config", "resolved"),
+    ]
+
+    assert main(["inspect", "codex", "/srv/agent", "--resolve-thread"]) == 0
+    probed = json.loads(capsys.readouterr().out)
+    assert [(item["kind"], item["plane"]) for item in probed["evidence"]] == [
+        ("codex.runtime", "live"),
+        ("codex.config", "resolved"),
+        ("codex.thread", "resolved"),
     ]
 
 
