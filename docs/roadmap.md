@@ -4,7 +4,7 @@ The roadmap is intentionally validation-driven. A phase should prove its data mo
 
 ## Current checkpoint
 
-Phases 0–3 are validated, and the first Phase 4 verification primitives are working on real Codex snapshots and live collection.
+RuntimeTruth v0.1.0 is public. Phases 0–4 are validated end to end on real Codex runtimes, including live verification, selective protected invariants, machine-readable reports and CI-friendly exit semantics.
 
 The current implementation can:
 
@@ -17,7 +17,58 @@ The current implementation can:
 - verify snapshot-vs-snapshot baselines with stable PASS / DRIFT / ERROR exit codes
 - collect a live Codex runtime and verify it directly against a baseline
 
-Generic infrastructure expansion and additional agent adapters remain intentionally paused while the verification model is hardened.
+Generic infrastructure expansion and additional agent adapters remain intentionally paused. The immediate post-v0.1.0 priority is distribution and external validation rather than surface-area growth.
+
+## Immediate post-v0.1.0 priorities
+
+### 1. Distribution and install friction
+
+Ship the existing CLI through normal Python distribution channels before adding new runtime features.
+
+Candidates:
+
+- publish RuntimeTruth to PyPI using trusted publishing rather than a long-lived API token
+- document `pipx`, `uv tool` and standard `pip` installation paths
+- smoke-test the published wheel from a clean environment
+- keep source-pinned installation documented for CI workflows that require an exact commit
+
+**Exit:** a new user can install the released CLI without cloning the repository.
+
+### 2. External validation
+
+Use the public v0.1.x line to learn which workflows real users actually need.
+
+Signals to collect:
+
+- successful installs on machines we do not control
+- baseline verification in real CI or operational workflows
+- which invariants users protect repeatedly
+- where snapshot evidence is still ambiguous or too noisy
+- repeated requests for another agent runtime
+
+**Guardrail:** do not add Claude Code, Gemini CLI, Cursor or another adapter only to make the compatibility list longer.
+
+### 3. CI ergonomics
+
+Only after source/PyPI installation is proven in real workflows, reduce recurring setup friction.
+
+Possible next step:
+
+- a minimal GitHub Action or reusable workflow that invokes the same CLI and preserves the existing `0 / 2 / 1` exit contract
+
+The Action must remain a thin integration layer, not a second verification engine.
+
+### 4. Verification hardening
+
+Only add policy syntax when repeated CLI selectors become a real usability problem.
+
+Candidates:
+
+- persisted local invariant file
+- clearer allowed-drift rules with the same explicit evidence semantics
+- additional structured output only for concrete integrations
+
+**Exit:** repeated production verification remains readable without weakening evidence or error semantics.
 
 ## Phase 0 — Bootstrap
 
@@ -98,9 +149,13 @@ Next candidates, only when justified by a concrete workflow:
 
 **Current trust boundary:** a baseline is a file selected by the caller. It is not yet signed, centrally approved, or tamper-evident.
 
-**Exit:** RuntimeTruth can gate a deployment or runtime check on explicit, evidence-backed invariants.
+**Status:** validated and released in v0.1.0.
+
+**Exit:** achieved. RuntimeTruth can gate a deployment or runtime check on explicit, evidence-backed invariants.
 
 ## Phase 5 — Attestation
+
+Start only after the v0.1.x verification workflow has external users and the baseline trust boundary becomes a demonstrated limitation.
 
 - canonical snapshot hashing
 - integrate established signing/attestation primitives rather than inventing a new trust stack
