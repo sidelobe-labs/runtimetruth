@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from runtimetruth.cli import build_parser, main
-from runtimetruth.model import EvidenceRecord, EvidenceSource
+from runtimetruth.model import EvidenceRecord, EvidenceSource, Snapshot, Target
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "snapshots"
 
@@ -224,7 +224,58 @@ def test_verify_drift_returns_two_and_renders_diff(capsys) -> None:
     assert output.startswith("DRIFT: runtime differs from baseline.\n\n")
     assert "SERVICE\n" in output
     assert "CODE\n" in output
+
+
+def test_verify_live_codex_reuses_collector(monkeypatch, tmp_path, capsys) -> None:
+    source = EvidenceSource(collector="codex", method="codex --version")
+    target = Target(kind="codex.workspace", identifier="/srv/agent")
+    runtime = EvidenceRecord(
+        plane="live",
+        kind="codex.runtime",
+        source=source,
+        data={
+            "binary": "/usr/bin/codex",
+            "version": "codex-cli 0.test",
+        },
+    )
+    config = EvidenceRecord(
+        plane="resolved",
+        kind="codex.config",
+        source=EvidenceSource(collector="codex", method="app-server config/read"),
+        data={"cwd": "/srv/agent"},
+    )
+    baseline = Snapshot.capture(
+        target=target,
+        evidence=(runtime, config),
+    )
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(baseline.to_json(pretty=True), encoding="utf-8")
+
+    monkeypatch.setattr(
+        "runtimetruth.cli.collect_codex_runtime",
+        lambda path, *, resolve_thread=False, resolve_mcp=False: (runtime, config),
+    )
+
     assert (
-        "head_commit: 1111111111111111111111111111111111111111 -> "
-        "2222222222222222222222222222222222222222"
-    ) in output
+        main(
+            [
+                "verify",
+                str(baseline_path),
+                "--codex",
+                "/srv/agent",
+            ]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out == "PASS: runtime matches baseline.\n"
+
+
+def test_verify_rejects_snapshot_and_live_codex_together(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    assert main(["verify", baseline, current, "--codex", "/srv/agent"]) == 1
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "either a current snapshot or --codex" in captured.err
