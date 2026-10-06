@@ -8,7 +8,8 @@ from collections.abc import Callable
 
 from runtimetruth import __version__
 from runtimetruth.collectors import CollectionError, collect_git_repository
-from runtimetruth.collectors.systemd import collect_systemd_unit, validate_systemd_unit_name
+from runtimetruth.collectors.systemd import validate_systemd_unit_name
+from runtimetruth.inspection import inspect_systemd_runtime
 from runtimetruth.model import Snapshot, Target
 
 
@@ -20,14 +21,15 @@ def _systemd_unit(value: str) -> str:
 
 
 def _inspect_systemd(args: argparse.Namespace) -> int:
-    evidence = collect_systemd_unit(args.unit)
-    resolved_unit = evidence.data["unit_id"]
+    evidence = inspect_systemd_runtime(args.unit)
+    service = evidence[0]
+    resolved_unit = service.data["unit_id"]
     if not isinstance(resolved_unit, str):
         raise CollectionError("systemd unit identity has an invalid type")
 
     snapshot = Snapshot.capture(
         target=Target(kind="systemd.unit", identifier=resolved_unit),
-        evidence=(evidence,),
+        evidence=evidence,
     )
     print(snapshot.to_json(pretty=args.pretty))
     return 0
