@@ -32,6 +32,107 @@ def test_realistic_snapshot_diff_groups_runtime_changes() -> None:
     )
 
 
+def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
+    target = Target(kind="codex.workspace", identifier="/srv/agent")
+    runtime_source = EvidenceSource(collector="codex", method="codex --version")
+    config_source = EvidenceSource(collector="codex", method="app-server config/read")
+    thread_source = EvidenceSource(collector="codex", method="app-server thread/start")
+
+    before = Snapshot.capture(
+        target=target,
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="codex.runtime",
+                source=runtime_source,
+                data={
+                    "binary": "/usr/lib/codex/codex.js",
+                    "version": "codex-cli 0.156.1",
+                },
+            ),
+            EvidenceRecord(
+                plane="resolved",
+                kind="codex.config",
+                source=config_source,
+                data={
+                    "cwd": "/srv/agent",
+                    "model": None,
+                    "sandbox_mode": "workspace-write",
+                },
+            ),
+            EvidenceRecord(
+                plane="resolved",
+                kind="codex.thread",
+                source=thread_source,
+                data={
+                    "model": "gpt-6-astra",
+                    "approval_policy": "on-request",
+                    "instruction_sources": '["/srv/agent/AGENTS.md"]',
+                    "sandbox": (
+                        '{"networkAccess":true,"type":"workspaceWrite","writableRoots":[]}'
+                    ),
+                },
+            ),
+        ),
+    )
+    after = Snapshot.capture(
+        target=target,
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="codex.runtime",
+                source=runtime_source,
+                data={
+                    "binary": "/usr/lib/codex/codex.js",
+                    "version": "codex-cli 0.157.0",
+                },
+            ),
+            EvidenceRecord(
+                plane="resolved",
+                kind="codex.config",
+                source=config_source,
+                data={
+                    "cwd": "/srv/agent",
+                    "model": "gpt-6-pro",
+                    "sandbox_mode": "workspace-write",
+                },
+            ),
+            EvidenceRecord(
+                plane="resolved",
+                kind="codex.thread",
+                source=thread_source,
+                data={
+                    "model": "gpt-6-pro",
+                    "approval_policy": "never",
+                    "instruction_sources": ('["/srv/agent/AGENTS.md","/srv/agent/sub/AGENTS.md"]'),
+                    "sandbox": (
+                        '{"networkAccess":false,"type":"workspaceWrite","writableRoots":[]}'
+                    ),
+                },
+            ),
+        ),
+    )
+
+    assert format_diff(diff_snapshots(before, after)) == "\n".join(
+        [
+            "CODEX RUNTIME",
+            "  version: codex-cli 0.156.1 -> codex-cli 0.157.0",
+            "",
+            "CODEX CONFIG",
+            "  model: null -> gpt-6-pro",
+            "",
+            "CODEX THREAD",
+            "  approval_policy: on-request -> never",
+            '  instruction_sources: ["/srv/agent/AGENTS.md"] -> '
+            '["/srv/agent/AGENTS.md","/srv/agent/sub/AGENTS.md"]',
+            "  model: gpt-6-astra -> gpt-6-pro",
+            '  sandbox: {"networkAccess":true,"type":"workspaceWrite",'
+            '"writableRoots":[]} -> '
+            '{"networkAccess":false,"type":"workspaceWrite","writableRoots":[]}',
+        ]
+    )
+
+
 def test_capture_time_is_not_a_runtime_change() -> None:
     before = load_snapshot(str(_FIXTURES / "before.json"))
     payload = before.to_dict()
