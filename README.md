@@ -30,7 +30,7 @@ RuntimeTruth currently focuses on two questions:
 1. **What runtime state can be established with explicit evidence?**
 2. **What changed since a known baseline?**
 
-Policy evaluation and portable attestation remain later phases.
+Broader policy evaluation and organizational provenance remain later phases.
 
 ## Project model
 
@@ -93,10 +93,12 @@ Bind a reviewed baseline to an identity-backed Sigstore attestation:
 runtimetruth digest baseline.json
 
 runtimetruth attest baseline.json \
+  --statement baseline.intoto.json \
   --bundle baseline.sigstore.json
 
 runtimetruth verify-attestation \
   baseline.json \
+  --statement baseline.intoto.json \
   --bundle baseline.sigstore.json \
   --certificate-identity "EXPECTED_IDENTITY" \
   --certificate-oidc-issuer "EXPECTED_ISSUER" \
@@ -104,7 +106,7 @@ runtimetruth verify-attestation \
   --resolve-thread
 ```
 
-Attestation uses RFC 8785 canonical JSON, SHA-256, in-toto Statement v1, DSSE and Sigstore Cosign rather than a RuntimeTruth-specific signature scheme. See [signed baseline attestations](docs/attestation.md).
+Attestation uses RFC 8785 canonical JSON, SHA-256, in-toto Statement v1 and Sigstore Cosign rather than a RuntimeTruth-specific signature scheme. See [signed baseline attestations](docs/attestation.md).
 
 ## Current CLI
 
@@ -159,9 +161,11 @@ Canonical baseline identity and signed verification are separate commands:
 runtimetruth digest <baseline.json>
 
 runtimetruth attest <baseline.json> \
+  --statement <baseline.intoto.json> \
   --bundle <baseline.sigstore.json>
 
 runtimetruth verify-attestation <baseline.json> [current.json] \
+  --statement <baseline.intoto.json> \
   --bundle <baseline.sigstore.json> \
   --certificate-identity <expected-identity> \
   --certificate-oidc-issuer <expected-issuer>
