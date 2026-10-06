@@ -87,6 +87,25 @@ runtimetruth verify baseline.json --codex . --resolve-thread \
 
 Add `--json` for a versioned machine-readable PASS/DRIFT report.
 
+Bind a reviewed baseline to an identity-backed Sigstore attestation:
+
+```bash
+runtimetruth digest baseline.json
+
+runtimetruth attest baseline.json \
+  --bundle baseline.sigstore.json
+
+runtimetruth verify-attestation \
+  baseline.json \
+  --bundle baseline.sigstore.json \
+  --certificate-identity "EXPECTED_IDENTITY" \
+  --certificate-oidc-issuer "EXPECTED_ISSUER" \
+  --codex . \
+  --resolve-thread
+```
+
+Attestation uses RFC 8785 canonical JSON, SHA-256, in-toto Statement v1, DSSE and Sigstore Cosign rather than a RuntimeTruth-specific signature scheme. See [signed baseline attestations](docs/attestation.md).
+
 ## Current CLI
 
 Inspect a local target:
@@ -134,6 +153,24 @@ runtimetruth verify baseline.json --codex <cwd> --resolve-thread \
 
 For automation, add `--json` to emit a versioned structured PASS/DRIFT report without changing the exit-code contract.
 
+Canonical baseline identity and signed verification are separate commands:
+
+```console
+runtimetruth digest <baseline.json>
+
+runtimetruth attest <baseline.json> \
+  --bundle <baseline.sigstore.json>
+
+runtimetruth verify-attestation <baseline.json> [current.json] \
+  --bundle <baseline.sigstore.json> \
+  --certificate-identity <expected-identity> \
+  --certificate-oidc-issuer <expected-issuer>
+```
+
+`verify-attestation` can also use `--codex <cwd>`, `--resolve-thread`, `--resolve-mcp`, repeatable `--protect`, and `--json`.
+
+Creating or verifying identity-backed attestations requires a recent [Sigstore Cosign](https://docs.sigstore.dev/cosign/system_config/installation/) executable. Normal inspect/diff/verify commands do not require Cosign.
+
 `--resolve-thread` creates an ephemeral Codex thread without starting a turn. `--resolve-mcp` additionally probes thread-scoped MCP runtime state and may contact configured MCP servers or refresh authentication; it does not call MCP tools.
 
 ## Evidence currently collected
@@ -166,6 +203,7 @@ See:
 - [Roadmap](docs/roadmap.md)
 - [Architecture](docs/architecture.md)
 - [CI integration](docs/ci.md)
+- [Signed baseline attestations](docs/attestation.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Trust model](docs/trust-model.md)

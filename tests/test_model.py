@@ -85,3 +85,15 @@ def test_snapshot_json_round_trip() -> None:
 def test_snapshot_parser_rejects_unknown_schema_version() -> None:
     with pytest.raises(SnapshotFormatError, match="unsupported schema_version"):
         Snapshot.from_json('{"schema_version":2,"captured_at":"x","target":{},"evidence":[]}')
+
+
+def test_snapshot_parser_rejects_duplicate_json_keys() -> None:
+    payload = (
+        '{"schema_version":1,"schema_version":1,'
+        '"captured_at":"2026-10-06T00:00:00Z",'
+        '"target":{"kind":"git.repository","identifier":"/srv/agent"},'
+        '"evidence":[]}'
+    )
+
+    with pytest.raises(SnapshotFormatError, match="duplicate JSON object key"):
+        Snapshot.from_json(payload)

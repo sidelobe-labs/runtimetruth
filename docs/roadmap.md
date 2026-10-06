@@ -155,14 +155,25 @@ Next candidates, only when justified by a concrete workflow:
 
 ## Phase 5 — Attestation
 
-Start only after the v0.1.x verification workflow has external users and the baseline trust boundary becomes a demonstrated limitation.
+The first vertical slice is implemented around the baseline trust boundary:
 
-- canonical snapshot hashing
-- integrate established signing/attestation primitives rather than inventing a new trust stack
-- portable verification
-- provenance and schema migration rules
+- RFC 8785 canonical snapshot hashing
+- SHA-256 baseline identity
+- in-toto Statement v1 predicate
+- DSSE-backed Sigstore/Cosign keyless attestation
+- exact OIDC signer identity verification
+- signed subject digest verification before runtime comparison
 
-**Exit:** an agent runtime can produce a portable, independently verifiable statement of observed state.
+Still deferred until justified by external workflows:
+
+- organizational approval/authority semantics
+- portable provenance beyond one signed baseline
+- schema migration rules for signed attestations
+- richer attestation policy or multi-party approval
+
+**Status:** first identity + baseline integrity slice implemented; broader provenance remains experimental.
+
+**Exit:** partially achieved. A baseline can now be bound to a verifiable signing identity before RuntimeTruth compares the current runtime.
 
 ## Phase 6 — Product validation
 

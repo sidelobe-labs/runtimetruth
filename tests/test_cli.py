@@ -411,3 +411,197 @@ def test_verify_json_drift_report_preserves_structure(capsys) -> None:
             ],
         }
     ]
+
+
+def test_digest_emits_canonical_sha256(monkeypatch, capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    monkeypatch.setattr("runtimetruth.cli.snapshot_sha256", lambda snapshot: "a" * 64)
+
+    assert main(["digest", baseline]) == 0
+
+    assert capsys.readouterr().out == f"sha256:{'a' * 64}\n"
+
+
+def test_attest_emits_digest_and_bundle_path(monkeypatch, capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+
+    monkeypatch.setattr(
+        "runtimetruth.cli.create_signed_attestation",
+        lambda baseline, *, bundle_path, cosign: "b" * 64,
+    )
+
+    assert (
+        main(
+            [
+                "attest",
+                baseline,
+                "--bundle",
+                "baseline.sigstore.json",
+            ]
+        )
+        == 0
+    )
+
+    assert capsys.readouterr().out == (
+        f"BASELINE: sha256:{'b' * 64}\nATTESTATION: baseline.sigstore.json\n"
+    )
+
+
+def test_verify_attestation_pass_verifies_trust_before_runtime(
+    monkeypatch,
+    capsys,
+) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    events: list[str] = []
+
+    def verify_trust(*args, **kwargs):
+        events.append("trust")
+        return "c" * 64
+
+    monkeypatch.setattr(
+        "runtimetruth.cli.verify_signed_attestation",
+        verify_trust,
+    )
+
+    assert (
+        main(
+            [
+                "verify-attestation",
+                baseline,
+                baseline,
+                "--bundle",
+                "baseline.sigstore.json",
+                "--certificate-identity",
+                "signer@example.com",
+                "--certificate-oidc-issuer",
+                "https://accounts.example.com",
+            ]
+        )
+        == 0
+    )
+
+    assert events == ["trust"]
+    assert capsys.readouterr().out == (
+        "IDENTITY: VERIFIED\n"
+        "  certificate_identity: signer@example.com\n"
+        "  oidc_issuer: https://accounts.example.com\n"
+        "BASELINE: VERIFIED\n"
+        f"  sha256: {'c' * 64}\n"
+        "RUNTIME: PASS\n"
+    )
+
+
+def test_verify_attestation_drift_preserves_exit_two(monkeypatch, capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    monkeypatch.setattr(
+        "runtimetruth.cli.verify_signed_attestation",
+        lambda *args, **kwargs: "d" * 64,
+    )
+
+    assert (
+        main(
+            [
+                "verify-attestation",
+                baseline,
+                current,
+                "--bundle",
+                "baseline.sigstore.json",
+                "--certificate-identity",
+                "signer@example.com",
+                "--certificate-oidc-issuer",
+                "https://accounts.example.com",
+                "--protect",
+                "git.repository.head_commit",
+            ]
+        )
+        == 2
+    )
+
+    output = capsys.readouterr().out
+    assert output.startswith("IDENTITY: VERIFIED\n")
+    assert "BASELINE: VERIFIED\n" in output
+    assert "RUNTIME: DRIFT\n" in output
+    assert "head_commit:" in output
+
+
+def test_verify_attestation_json_report_includes_trust_result(
+    monkeypatch,
+    capsys,
+) -> None:
+    baseline = str(_FIXTURES / "before.json")
+
+    monkeypatch.setattr(
+        "runtimetruth.cli.verify_signed_attestation",
+        lambda *args, **kwargs: "e" * 64,
+    )
+
+    assert (
+        main(
+            [
+                "verify-attestation",
+                baseline,
+                baseline,
+                "--bundle",
+                "baseline.sigstore.json",
+                "--certificate-identity",
+                "https://github.com/example/project/.github/workflows/attest.yml@refs/heads/main",
+                "--certificate-oidc-issuer",
+                "https://token.actions.githubusercontent.com",
+                "--json",
+            ]
+        )
+        == 0
+    )
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["status"] == "pass"
+    assert report["identity"] == {
+        "verified": True,
+        "certificate_identity": "https://github.com/example/project/.github/workflows/attest.yml@refs/heads/main",
+        "oidc_issuer": "https://token.actions.githubusercontent.com",
+    }
+    assert report["baseline"] == {
+        "verified": True,
+        "sha256": "e" * 64,
+    }
+    assert report["changes"] == []
+
+
+def test_verify_attestation_identity_failure_stops_before_runtime(
+    monkeypatch,
+    capsys,
+) -> None:
+    baseline = str(_FIXTURES / "before.json")
+
+    def fail_identity(*args, **kwargs):
+        from runtimetruth.attestation import AttestationError
+
+        raise AttestationError("identity mismatch")
+
+    monkeypatch.setattr(
+        "runtimetruth.cli.verify_signed_attestation",
+        fail_identity,
+    )
+
+    assert (
+        main(
+            [
+                "verify-attestation",
+                baseline,
+                baseline,
+                "--bundle",
+                "baseline.sigstore.json",
+                "--certificate-identity",
+                "expected",
+                "--certificate-oidc-issuer",
+                "https://issuer.example",
+            ]
+        )
+        == 1
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "identity mismatch" in captured.err
