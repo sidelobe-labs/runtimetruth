@@ -11,10 +11,8 @@ from runtimetruth import __version__
 from runtimetruth.attestation import (
     AttestationError,
     create_signed_attestation,
-    load_statement,
     snapshot_sha256,
-    validate_statement,
-    verify_statement_signature,
+    verify_signed_attestation,
 )
 from runtimetruth.collectors import (
     CollectionError,
@@ -121,13 +119,11 @@ def _attest(args: argparse.Namespace) -> int:
     baseline = load_snapshot(args.baseline)
     digest = create_signed_attestation(
         baseline,
-        statement_path=args.statement,
         bundle_path=args.bundle,
         cosign=args.cosign,
     )
     print(f"BASELINE: sha256:{digest}")
-    print(f"STATEMENT: {args.statement}")
-    print(f"BUNDLE: {args.bundle}")
+    print(f"ATTESTATION: {args.bundle}")
     return 0
 
 
@@ -195,15 +191,13 @@ def _verify(args: argparse.Namespace) -> int:
 def _verify_attestation(args: argparse.Namespace) -> int:
     baseline = load_snapshot(args.baseline)
 
-    verify_statement_signature(
-        args.attestation,
+    digest = verify_signed_attestation(
+        baseline,
         args.bundle,
         certificate_identity=args.certificate_identity,
         certificate_oidc_issuer=args.certificate_oidc_issuer,
         cosign=args.cosign,
     )
-    statement = load_statement(args.attestation)
-    digest = validate_statement(statement, baseline)
 
     if args.current is not None and args.codex is not None:
         raise DiffError(
@@ -353,16 +347,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     attest_parser.add_argument("baseline")
     attest_parser.add_argument(
-        "--statement",
-        required=True,
-        metavar="FILE",
-        help="Write the canonical in-toto Statement v1 to FILE.",
-    )
-    attest_parser.add_argument(
         "--bundle",
         required=True,
         metavar="FILE",
-        help="Write the Sigstore verification bundle to FILE.",
+        help="Write the signed DSSE/in-toto Sigstore attestation bundle to FILE.",
     )
     attest_parser.add_argument(
         "--cosign",
@@ -423,16 +411,10 @@ def build_parser() -> argparse.ArgumentParser:
     verify_attestation_parser.add_argument("baseline")
     verify_attestation_parser.add_argument("current", nargs="?")
     verify_attestation_parser.add_argument(
-        "--attestation",
-        required=True,
-        metavar="FILE",
-        help="Signed RuntimeTruth in-toto statement.",
-    )
-    verify_attestation_parser.add_argument(
         "--bundle",
         required=True,
         metavar="FILE",
-        help="Sigstore bundle created when the attestation was signed.",
+        help="Signed DSSE/in-toto Sigstore attestation bundle.",
     )
     verify_attestation_parser.add_argument(
         "--certificate-identity",
