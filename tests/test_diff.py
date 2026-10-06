@@ -37,6 +37,10 @@ def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
     runtime_source = EvidenceSource(collector="codex", method="codex --version")
     config_source = EvidenceSource(collector="codex", method="app-server config/read")
     thread_source = EvidenceSource(collector="codex", method="app-server thread/start")
+    instruction_source = EvidenceSource(
+        collector="filesystem",
+        method="sha256 Codex thread instructionSources",
+    )
 
     before = Snapshot.capture(
         target=target,
@@ -71,6 +75,15 @@ def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
                     "sandbox": (
                         '{"networkAccess":true,"type":"workspaceWrite","writableRoots":[]}'
                     ),
+                },
+            ),
+            EvidenceRecord(
+                plane="live",
+                kind="codex.instructions",
+                source=instruction_source,
+                data={
+                    "source_count": 1,
+                    "source:/srv/agent/AGENTS.md": "sha256:" + "a" * 64,
                 },
             ),
         ),
@@ -110,6 +123,16 @@ def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
                     ),
                 },
             ),
+            EvidenceRecord(
+                plane="live",
+                kind="codex.instructions",
+                source=instruction_source,
+                data={
+                    "source_count": 2,
+                    "source:/srv/agent/AGENTS.md": "sha256:" + "b" * 64,
+                    "source:/srv/agent/sub/AGENTS.md": "sha256:" + "c" * 64,
+                },
+            ),
         ),
     )
 
@@ -129,6 +152,11 @@ def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
             '  sandbox: {"networkAccess":true,"type":"workspaceWrite",'
             '"writableRoots":[]} -> '
             '{"networkAccess":false,"type":"workspaceWrite","writableRoots":[]}',
+            "",
+            "CODEX INSTRUCTIONS",
+            "  source:/srv/agent/AGENTS.md: sha256:" + "a" * 64 + " -> sha256:" + "b" * 64,
+            "  source:/srv/agent/sub/AGENTS.md: <missing> -> sha256:" + "c" * 64,
+            "  source_count: 1 -> 2",
         ]
     )
 
