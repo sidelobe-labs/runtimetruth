@@ -54,10 +54,11 @@ Attestation commands have an additional explicit network boundary:
 
 - `runtimetruth attest` invokes Sigstore Cosign for keyless signing; Cosign may contact an OIDC provider, Fulcio and Sigstore transparency/timestamp services
 - `runtimetruth verify-attestation` invokes Cosign verification and may use Sigstore trust-root or transparency infrastructure as required by the installed Cosign version
-- RuntimeTruth writes the RFC 8785 canonical baseline and attestation predicate only into temporary local files while invoking Cosign, then removes those temporary inputs
-- the requested Sigstore bundle remains under the caller's control and contains signing certificate/transparency metadata in addition to the signed attestation
+- RuntimeTruth canonicalizes the baseline in memory and writes the caller-requested canonical in-toto statement file; the statement contains the baseline digest and versioned predicate, not the baseline contents
+- Cosign signs the exact statement bytes and may contact OIDC, Fulcio, transparency-log and timestamp services as part of keyless signing or verification
+- the requested Sigstore bundle remains under the caller's control and contains signing certificate/transparency verification material
 
-The canonical baseline contains the same snapshot data as the caller-provided baseline, only in a deterministic serialization. It should therefore be treated with the same sensitivity as the snapshot itself.
+The baseline snapshot itself remains local to RuntimeTruth's normal file/collector boundary. The statement and bundle should still be treated as security-sensitive provenance because they identify the approved digest and signer.
 
 ## Future hosted features
 
