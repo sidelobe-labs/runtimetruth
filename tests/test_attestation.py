@@ -137,6 +137,7 @@ def test_validate_statement_rejects_different_baseline_digest() -> None:
         lambda statement: statement["predicate"].update({"extra": True}),
         lambda statement: statement.update({"_type": "https://example.invalid/Statement/v1"}),
         lambda statement: statement.update({"predicateType": "https://example.invalid/predicate"}),
+        lambda statement: statement["subject"][0].update({"name": "other"}),
         lambda statement: statement["subject"][0]["digest"].update({"sha512": "00"}),
         lambda statement: statement["predicate"].update({"canonicalization": "custom"}),
     ],
