@@ -332,9 +332,7 @@ def _mcp_server_data(
     data[f"{prefix}:http_origin"] = http_origin
     data[f"{prefix}:tool_count"] = len(tool_names)
     data[f"{prefix}:tools"] = json.dumps(tool_names, separators=(",", ":"))
-    data[f"{prefix}:tool_catalog_status"] = (
-        "error" if tools_error is not None else "available"
-    )
+    data[f"{prefix}:tool_catalog_status"] = "error" if tools_error is not None else "available"
     data[f"{prefix}:tool_catalog_sha256"] = f"sha256:{catalog_hash}"
 
 
@@ -378,9 +376,7 @@ def _query_mcp_evidence(
 
         for server in servers:
             if not isinstance(server, dict):
-                raise CollectionError(
-                    "codex mcpServerStatus/list returned a non-object server"
-                )
+                raise CollectionError("codex mcpServerStatus/list returned a non-object server")
             _mcp_server_data(
                 server,
                 data=data,
