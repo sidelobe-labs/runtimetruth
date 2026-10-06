@@ -9,6 +9,10 @@ from runtimetruth.collectors.errors import CollectionError
 from runtimetruth.model import EvidenceRecord, EvidenceSource
 
 
+class NotRepositoryError(CollectionError):
+    """Raised when a path is valid but is not inside a Git work tree."""
+
+
 def _run_git(
     repository: Path,
     *arguments: str,
@@ -51,7 +55,11 @@ def collect_git_repository(path: str, *, timeout: float = 5.0) -> EvidenceRecord
         "rev-parse",
         "--show-toplevel",
         timeout=timeout,
+        allowed_returncodes=(0, 128),
     )
+    if root_result.returncode == 128:
+        raise NotRepositoryError(f"path is not inside a Git work tree: {path!r}")
+
     repository_root = Path(root_result.stdout.strip()).resolve()
 
     head_result = _run_git(

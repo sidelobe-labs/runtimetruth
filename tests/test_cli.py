@@ -10,8 +10,8 @@ def test_parser_has_expected_program_name() -> None:
     assert parser.prog == "runtimetruth"
 
 
-def test_systemd_inspect_emits_snapshot_json(monkeypatch, capsys) -> None:
-    evidence = EvidenceRecord(
+def test_systemd_inspect_emits_composed_snapshot_json(monkeypatch, capsys) -> None:
+    service = EvidenceRecord(
         plane="live",
         kind="systemd.unit",
         source=EvidenceSource(collector="systemd", method="systemctl show"),
@@ -21,9 +21,19 @@ def test_systemd_inspect_emits_snapshot_json(monkeypatch, capsys) -> None:
             "main_pid": 42,
         },
     )
+    process = EvidenceRecord(
+        plane="live",
+        kind="linux.process",
+        source=EvidenceSource(collector="procfs", method="/proc/<pid>/{cwd,exe}"),
+        data={
+            "pid": 42,
+            "cwd": "/srv/agent",
+            "executable": "/usr/bin/python3",
+        },
+    )
     monkeypatch.setattr(
-        "runtimetruth.cli.collect_systemd_unit",
-        lambda unit: evidence,
+        "runtimetruth.cli.inspect_systemd_runtime",
+        lambda unit: (service, process),
     )
 
     assert main(["inspect", "systemd", "agent.service"]) == 0
@@ -34,7 +44,10 @@ def test_systemd_inspect_emits_snapshot_json(monkeypatch, capsys) -> None:
         "kind": "systemd.unit",
         "identifier": "agent.service",
     }
-    assert payload["evidence"][0]["data"]["main_pid"] == 42
+    assert [record["kind"] for record in payload["evidence"]] == [
+        "systemd.unit",
+        "linux.process",
+    ]
 
 
 def test_git_inspect_emits_snapshot_json(monkeypatch, capsys) -> None:

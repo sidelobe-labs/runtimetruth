@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from runtimetruth.collectors.errors import CollectionError
-from runtimetruth.collectors.git import collect_git_repository
+from runtimetruth.collectors.git import NotRepositoryError, collect_git_repository
 
 
 def _git(repository: Path, *arguments: str) -> str:
@@ -77,5 +77,10 @@ def test_collector_rejects_non_repository_path(tmp_path: Path) -> None:
     directory = tmp_path / "plain"
     directory.mkdir()
 
-    with pytest.raises(CollectionError, match="exit status"):
+    with pytest.raises(NotRepositoryError, match="not inside a Git work tree"):
         collect_git_repository(str(directory))
+
+
+def test_missing_path_remains_collection_error(tmp_path: Path) -> None:
+    with pytest.raises(CollectionError, match="does not exist"):
+        collect_git_repository(str(tmp_path / "missing"))
