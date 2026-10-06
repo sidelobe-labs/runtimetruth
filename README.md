@@ -30,7 +30,7 @@ RuntimeTruth currently focuses on two questions:
 1. **What runtime state can be established with explicit evidence?**
 2. **What changed since a known baseline?**
 
-Broader policy evaluation and organizational provenance remain later phases.
+Broader policy evaluation and organizational provenance remain later phases. The current policy file is intentionally narrower: it persists only the evidence selectors that should gate verification.
 
 ## Project model
 
@@ -145,12 +145,15 @@ Verification uses stable process exit codes:
 - `2` — semantic runtime drift detected
 - `1` — collection, input, or comparison error
 
-Selective runtime invariants can be protected explicitly:
+Selective runtime invariants can be protected explicitly, or persisted in a small schema-v1 TOML policy:
 
 ```console
 runtimetruth verify baseline.json --codex <cwd> --resolve-thread \
   --protect codex.thread.model \
   --protect codex.instructions
+
+runtimetruth verify baseline.json --codex <cwd> --resolve-thread \
+  --policy .runtimetruth/policy.toml
 ```
 
 For automation, add `--json` to emit a versioned structured PASS/DRIFT report without changing the exit-code contract.
@@ -197,7 +200,7 @@ Each evidence record keeps its provenance and is classified as declared, resolve
 
 RuntimeTruth is not intended to become a generic process monitor, LLM trace backend, MCP proxy/firewall, GitOps controller, or hosted observability dashboard.
 
-The current focus is to make baseline verification useful and trustworthy before adding policy syntax, attestation, additional agent adapters, or cloud features.
+The current focus is to make baseline verification useful and trustworthy before expanding into broader policy semantics, additional agent adapters, organizational provenance, or cloud features.
 
 See:
 
