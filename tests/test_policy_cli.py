@@ -37,12 +37,21 @@ def test_verify_policy_and_cli_protect_are_additive(tmp_path, capsys) -> None:
     policy = tmp_path / "policy.toml"
     policy.write_text('version = 1\nprotect = ["git.repository.branch"]\n', encoding="utf-8")
 
-    assert main([
-        "verify", baseline, current,
-        "--policy", str(policy),
-        "--protect", "git.repository.head_commit",
-        "--json",
-    ]) == 2
+    assert (
+        main(
+            [
+                "verify",
+                baseline,
+                current,
+                "--policy",
+                str(policy),
+                "--protect",
+                "git.repository.head_commit",
+                "--json",
+            ]
+        )
+        == 2
+    )
 
     report = json.loads(capsys.readouterr().out)
     assert report["protected"] == [
