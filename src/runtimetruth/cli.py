@@ -119,11 +119,13 @@ def _attest(args: argparse.Namespace) -> int:
     baseline = load_snapshot(args.baseline)
     digest = create_signed_attestation(
         baseline,
+        statement_path=args.statement,
         bundle_path=args.bundle,
         cosign=args.cosign,
     )
     print(f"BASELINE: sha256:{digest}")
-    print(f"ATTESTATION: {args.bundle}")
+    print(f"STATEMENT: {args.statement}")
+    print(f"BUNDLE: {args.bundle}")
     return 0
 
 
@@ -193,7 +195,8 @@ def _verify_attestation(args: argparse.Namespace) -> int:
 
     digest = verify_signed_attestation(
         baseline,
-        args.bundle,
+        statement_path=args.statement,
+        bundle_path=args.bundle,
         certificate_identity=args.certificate_identity,
         certificate_oidc_issuer=args.certificate_oidc_issuer,
         cosign=args.cosign,
@@ -345,10 +348,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     attest_parser.add_argument("baseline")
     attest_parser.add_argument(
+        "--statement",
+        required=True,
+        metavar="FILE",
+        help="Write the canonical in-toto Statement v1 JSON to FILE.",
+    )
+    attest_parser.add_argument(
         "--bundle",
         required=True,
         metavar="FILE",
-        help="Write the signed DSSE/in-toto Sigstore attestation bundle to FILE.",
+        help="Write the Sigstore verification bundle for the signed statement to FILE.",
     )
     attest_parser.add_argument(
         "--cosign",
@@ -406,10 +415,16 @@ def build_parser() -> argparse.ArgumentParser:
     verify_attestation_parser.add_argument("baseline")
     verify_attestation_parser.add_argument("current", nargs="?")
     verify_attestation_parser.add_argument(
+        "--statement",
+        required=True,
+        metavar="FILE",
+        help="Canonical in-toto Statement v1 JSON that was signed.",
+    )
+    verify_attestation_parser.add_argument(
         "--bundle",
         required=True,
         metavar="FILE",
-        help="Signed DSSE/in-toto Sigstore attestation bundle.",
+        help="Sigstore verification bundle for the signed statement.",
     )
     verify_attestation_parser.add_argument(
         "--certificate-identity",

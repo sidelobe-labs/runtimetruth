@@ -160,7 +160,7 @@ The first vertical slice is implemented around the baseline trust boundary:
 - RFC 8785 canonical snapshot hashing
 - SHA-256 baseline identity
 - in-toto Statement v1 predicate
-- DSSE-backed Sigstore/Cosign keyless attestation
+- canonical in-toto Statement v1 signed through Sigstore/Cosign keyless `sign-blob`
 - exact OIDC signer identity verification
 - signed subject digest verification before runtime comparison
 
