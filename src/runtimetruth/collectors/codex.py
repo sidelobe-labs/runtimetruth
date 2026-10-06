@@ -25,6 +25,8 @@ _SAFE_CONFIG_FIELDS = (
     "web_search",
 )
 
+_MCP_TOOL_NAMES_LIMIT = 50
+
 
 def _resolve_codex_binary(binary: str | None) -> Path:
     candidate = binary or shutil.which("codex")
@@ -331,7 +333,10 @@ def _mcp_server_data(
     data[f"{prefix}:plugin_id"] = plugin_id
     data[f"{prefix}:http_origin"] = http_origin
     data[f"{prefix}:tool_count"] = len(tool_names)
-    data[f"{prefix}:tools"] = json.dumps(tool_names, separators=(",", ":"))
+    include_tool_names = len(tool_names) <= _MCP_TOOL_NAMES_LIMIT
+    data[f"{prefix}:tool_names_included"] = include_tool_names
+    if include_tool_names:
+        data[f"{prefix}:tools"] = json.dumps(tool_names, separators=(",", ":"))
     data[f"{prefix}:tool_catalog_status"] = "error" if tools_error is not None else "available"
     data[f"{prefix}:tool_catalog_sha256"] = f"sha256:{catalog_hash}"
 
