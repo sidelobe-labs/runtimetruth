@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 import rfc8785
@@ -14,9 +16,9 @@ from runtimetruth.model import Snapshot
 
 STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PREDICATE_TYPE = "https://sidelobe.dev/runtimetruth/attestation/v1"
-SUBJECT_NAME = "runtimetruth-baseline"
 ATTESTATION_SCHEMA_VERSION = 1
 CANONICALIZATION = "RFC8785"
+_DSSE_PAYLOAD_TYPE = "application/vnd.in-toto+json"
 
 
 class AttestationError(RuntimeError):
@@ -36,51 +38,28 @@ def snapshot_sha256(snapshot: Snapshot) -> str:
     return hashlib.sha256(canonical_snapshot_bytes(snapshot)).hexdigest()
 
 
-def build_statement(snapshot: Snapshot) -> dict[str, object]:
-    """Build the minimal in-toto Statement v1 that binds one baseline digest."""
-    digest = snapshot_sha256(snapshot)
+def build_predicate(snapshot: Snapshot) -> dict[str, object]:
+    """Build the minimal RuntimeTruth predicate embedded in the in-toto statement."""
     return {
-        "_type": STATEMENT_TYPE,
-        "subject": [
-            {
-                "name": SUBJECT_NAME,
-                "digest": {
-                    "sha256": digest,
-                },
-            }
-        ],
-        "predicateType": PREDICATE_TYPE,
-        "predicate": {
-            "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
-            "snapshot_schema_version": snapshot.schema_version,
-            "canonicalization": CANONICALIZATION,
-        },
+        "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
+        "snapshot_schema_version": snapshot.schema_version,
+        "canonicalization": CANONICALIZATION,
     }
 
 
-def statement_bytes(snapshot: Snapshot) -> bytes:
-    """Return canonical RFC 8785 bytes for the RuntimeTruth in-toto statement."""
+def predicate_bytes(snapshot: Snapshot) -> bytes:
+    """Return RFC 8785 canonical bytes for the RuntimeTruth attestation predicate."""
     try:
-        return rfc8785.dumps(build_statement(snapshot))
+        return rfc8785.dumps(build_predicate(snapshot))
     except rfc8785.CanonicalizationError as exc:
-        raise AttestationError(f"attestation cannot be canonicalized with RFC 8785: {exc}") from exc
+        raise AttestationError(f"predicate cannot be canonicalized with RFC 8785: {exc}") from exc
 
 
-def _write_new(path: Path, payload: bytes) -> None:
+def _write(path: Path, payload: bytes) -> None:
     try:
-        with path.open("xb") as handle:
-            handle.write(payload)
-    except FileExistsError as exc:
-        raise AttestationError(f"refusing to overwrite existing file: {str(path)!r}") from exc
+        path.write_bytes(payload)
     except OSError as exc:
-        raise AttestationError(f"could not write {str(path)!r}: {exc.strerror}") from exc
-
-
-def write_statement(snapshot: Snapshot, path: str) -> str:
-    """Write one immutable canonical attestation statement and return its digest."""
-    statement_path = Path(path)
-    _write_new(statement_path, statement_bytes(snapshot))
-    return snapshot_sha256(snapshot)
+        raise AttestationError(f"could not write temporary attestation input: {exc}") from exc
 
 
 def _resolve_cosign(command: str) -> str:
@@ -102,38 +81,47 @@ def _cosign_error(action: str, result: subprocess.CompletedProcess[str]) -> Atte
     return AttestationError(f"cosign {action} failed with exit code {result.returncode}")
 
 
-def sign_statement(
-    statement_path: str,
-    bundle_path: str,
+def create_signed_attestation(
+    baseline: Snapshot,
     *,
+    bundle_path: str,
     cosign: str = "cosign",
-) -> None:
-    """Keylessly sign one statement with cosign and write a Sigstore bundle."""
-    statement = Path(statement_path)
+) -> str:
+    """Create a keyless DSSE/in-toto Sigstore attestation for one canonical baseline."""
     bundle = Path(bundle_path)
-
-    if not statement.is_file():
-        raise AttestationError(f"attestation statement does not exist: {statement_path!r}")
     if bundle.exists():
         raise AttestationError(f"refusing to overwrite existing file: {bundle_path!r}")
 
     executable = _resolve_cosign(cosign)
-    result = subprocess.run(
-        [
-            executable,
-            "sign-blob",
-            str(statement),
-            "--bundle",
-            str(bundle),
-            "--yes",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+
+    with tempfile.TemporaryDirectory(prefix="runtimetruth-attest-") as directory:
+        root = Path(directory)
+        canonical = root / "runtimetruth-baseline.json"
+        predicate = root / "predicate.json"
+        _write(canonical, canonical_snapshot_bytes(baseline))
+        _write(predicate, predicate_bytes(baseline))
+
+        result = subprocess.run(
+            [
+                executable,
+                "attest-blob",
+                "--predicate",
+                str(predicate),
+                "--type",
+                PREDICATE_TYPE,
+                "--bundle",
+                str(bundle),
+                "--yes",
+                str(canonical),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
     if result.returncode != 0:
         bundle.unlink(missing_ok=True)
-        raise _cosign_error("sign-blob", result)
+        raise _cosign_error("attest-blob", result)
 
     try:
         if bundle.stat().st_size == 0:
@@ -141,48 +129,19 @@ def sign_statement(
     except FileNotFoundError as exc:
         raise AttestationError(f"cosign did not produce bundle: {bundle_path!r}") from exc
 
+    return snapshot_sha256(baseline)
 
-def create_signed_attestation(
+
+def verify_signed_attestation(
     baseline: Snapshot,
-    *,
-    statement_path: str,
-    bundle_path: str,
-    cosign: str = "cosign",
-) -> str:
-    """Create a canonical statement, keylessly sign it, and return the baseline digest."""
-    statement = Path(statement_path)
-    bundle = Path(bundle_path)
-
-    if statement.exists():
-        raise AttestationError(f"refusing to overwrite existing file: {statement_path!r}")
-    if bundle.exists():
-        raise AttestationError(f"refusing to overwrite existing file: {bundle_path!r}")
-
-    try:
-        digest = write_statement(baseline, statement_path)
-        sign_statement(statement_path, bundle_path, cosign=cosign)
-    except Exception:
-        statement.unlink(missing_ok=True)
-        bundle.unlink(missing_ok=True)
-        raise
-
-    return digest
-
-
-def verify_statement_signature(
-    statement_path: str,
     bundle_path: str,
     *,
     certificate_identity: str,
     certificate_oidc_issuer: str,
     cosign: str = "cosign",
-) -> None:
-    """Verify a Sigstore bundle against one exact expected signing identity."""
-    statement = Path(statement_path)
+) -> str:
+    """Verify signer identity, in-toto subject digest, and RuntimeTruth predicate."""
     bundle = Path(bundle_path)
-
-    if not statement.is_file():
-        raise AttestationError(f"attestation statement does not exist: {statement_path!r}")
     if not bundle.is_file():
         raise AttestationError(f"Sigstore bundle does not exist: {bundle_path!r}")
     if not certificate_identity:
@@ -191,24 +150,35 @@ def verify_statement_signature(
         raise AttestationError("certificate OIDC issuer must not be empty")
 
     executable = _resolve_cosign(cosign)
-    result = subprocess.run(
-        [
-            executable,
-            "verify-blob",
-            str(statement),
-            "--bundle",
-            str(bundle),
-            "--certificate-identity",
-            certificate_identity,
-            "--certificate-oidc-issuer",
-            certificate_oidc_issuer,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+
+    with tempfile.TemporaryDirectory(prefix="runtimetruth-verify-") as directory:
+        canonical = Path(directory) / "runtimetruth-baseline.json"
+        _write(canonical, canonical_snapshot_bytes(baseline))
+
+        result = subprocess.run(
+            [
+                executable,
+                "verify-blob-attestation",
+                "--bundle",
+                str(bundle),
+                "--certificate-identity",
+                certificate_identity,
+                "--certificate-oidc-issuer",
+                certificate_oidc_issuer,
+                "--type",
+                PREDICATE_TYPE,
+                str(canonical),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
     if result.returncode != 0:
-        raise _cosign_error("verify-blob", result)
+        raise _cosign_error("verify-blob-attestation", result)
+
+    statement = load_bundle_statement(bundle_path)
+    return validate_statement(statement, baseline)
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -218,6 +188,18 @@ def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]
             raise AttestationError(f"duplicate JSON object key in attestation: {key!r}")
         result[key] = value
     return result
+
+
+def _decode_json(payload: bytes, *, field: str) -> object:
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise AttestationError(f"{field} must be UTF-8 JSON") from exc
+
+    try:
+        return json.loads(text, object_pairs_hook=_reject_duplicate_keys)
+    except json.JSONDecodeError as exc:
+        raise AttestationError(f"invalid {field} JSON: {exc.msg}") from exc
 
 
 def _object(value: object, *, field: str) -> dict[str, object]:
@@ -232,23 +214,37 @@ def _string(value: object, *, field: str) -> str:
     return value
 
 
-def load_statement(path: str) -> dict[str, object]:
-    """Load an attestation statement while rejecting duplicate JSON keys."""
+def load_bundle_statement(bundle_path: str) -> dict[str, object]:
+    """Extract the signed in-toto statement from a Sigstore DSSE bundle."""
     try:
-        payload = Path(path).read_text(encoding="utf-8")
+        bundle_bytes = Path(bundle_path).read_bytes()
     except OSError as exc:
-        raise AttestationError(f"could not read attestation {path!r}: {exc.strerror}") from exc
+        raise AttestationError(f"could not read Sigstore bundle {bundle_path!r}: {exc}") from exc
 
+    bundle = _object(_decode_json(bundle_bytes, field="Sigstore bundle"), field="Sigstore bundle")
+    envelope = _object(bundle.get("dsseEnvelope"), field="Sigstore bundle.dsseEnvelope")
+
+    payload_type = _string(
+        envelope.get("payloadType"),
+        field="Sigstore bundle.dsseEnvelope.payloadType",
+    )
+    if payload_type != _DSSE_PAYLOAD_TYPE:
+        raise AttestationError(f"unsupported DSSE payload type: {payload_type!r}")
+
+    encoded = _string(
+        envelope.get("payload"),
+        field="Sigstore bundle.dsseEnvelope.payload",
+    )
     try:
-        decoded = json.loads(payload, object_pairs_hook=_reject_duplicate_keys)
-    except json.JSONDecodeError as exc:
-        raise AttestationError(f"invalid attestation JSON {path!r}: {exc.msg}") from exc
+        payload = base64.b64decode(encoded, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise AttestationError("Sigstore DSSE payload is not valid base64") from exc
 
-    return _object(decoded, field="attestation")
+    return _object(_decode_json(payload, field="in-toto statement"), field="in-toto statement")
 
 
 def validate_statement(statement: dict[str, object], baseline: Snapshot) -> str:
-    """Validate a signed RuntimeTruth statement against the supplied baseline."""
+    """Validate the signed RuntimeTruth statement against the supplied baseline."""
     expected_root_keys = {"_type", "subject", "predicateType", "predicate"}
     if set(statement) != expected_root_keys:
         raise AttestationError("attestation root fields do not match RuntimeTruth schema v1")
@@ -268,8 +264,6 @@ def validate_statement(statement: dict[str, object], baseline: Snapshot) -> str:
     subject = _object(subjects[0], field="subject[0]")
     if set(subject) != {"name", "digest"}:
         raise AttestationError("attestation subject fields do not match RuntimeTruth schema v1")
-    if subject.get("name") != SUBJECT_NAME:
-        raise AttestationError(f"unexpected attestation subject name: {subject.get('name')!r}")
 
     digest = _object(subject.get("digest"), field="subject[0].digest")
     if set(digest) != {"sha256"}:
@@ -279,7 +273,7 @@ def validate_statement(statement: dict[str, object], baseline: Snapshot) -> str:
     expected_digest = snapshot_sha256(baseline)
     if attested_digest != expected_digest:
         raise AttestationError(
-            "attested baseline digest does not match the supplied baseline snapshot"
+            "attested baseline digest does not match the supplied canonical baseline"
         )
 
     predicate = _object(statement.get("predicate"), field="predicate")
