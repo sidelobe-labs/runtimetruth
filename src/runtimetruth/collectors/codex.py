@@ -149,6 +149,17 @@ def _instruction_sources(result: dict[str, object]) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _thread_id(result: dict[str, object]) -> str:
+    thread = result.get("thread")
+    if not isinstance(thread, dict):
+        raise CollectionError("codex thread/start returned no thread object")
+
+    thread_id = thread.get("id")
+    if not isinstance(thread_id, str) or not thread_id:
+        raise CollectionError("codex thread/start returned no thread id")
+    return thread_id
+
+
 def _thread_evidence(
     result: dict[str, object],
     *,
@@ -158,10 +169,7 @@ def _thread_evidence(
     if not isinstance(thread, dict):
         raise CollectionError("codex thread/start returned no thread object")
 
-    thread_id = thread.get("id")
-    if not isinstance(thread_id, str) or not thread_id:
-        raise CollectionError("codex thread/start returned no thread id")
-
+    _thread_id(result)
     data: dict[str, JsonScalar] = {}
 
     scalar_fields = {
@@ -256,13 +264,165 @@ def _instruction_file_evidence(
     )
 
 
+def _optional_string(
+    payload: dict[str, object],
+    field: str,
+    *,
+    context: str,
+) -> str | None:
+    value = payload.get(field)
+    if value is not None and not isinstance(value, str):
+        raise CollectionError(f"{context} returned invalid {field}")
+    return value
+
+
+def _mcp_server_data(
+    server: dict[str, object],
+    *,
+    data: dict[str, JsonScalar],
+    seen_names: set[str],
+) -> None:
+    name = server.get("name")
+    if not isinstance(name, str) or not name:
+        raise CollectionError("codex mcpServerStatus/list returned invalid server name")
+    if name in seen_names:
+        raise CollectionError(f"codex mcpServerStatus/list returned duplicate server {name!r}")
+    seen_names.add(name)
+
+    runtime_status = _optional_string(
+        server,
+        "runtimeStatus",
+        context="codex mcpServerStatus/list",
+    )
+    plugin_id = _optional_string(
+        server,
+        "pluginId",
+        context="codex mcpServerStatus/list",
+    )
+    http_origin = _optional_string(
+        server,
+        "httpOrigin",
+        context="codex mcpServerStatus/list",
+    )
+
+    auth_status = server.get("authStatus")
+    if not isinstance(auth_status, str):
+        raise CollectionError("codex mcpServerStatus/list returned invalid authStatus")
+
+    tools = server.get("tools")
+    if not isinstance(tools, dict) or not all(isinstance(key, str) for key in tools):
+        raise CollectionError("codex mcpServerStatus/list returned invalid tools catalog")
+
+    tools_error = server.get("toolsError")
+    if tools_error is not None and not isinstance(tools_error, str):
+        raise CollectionError("codex mcpServerStatus/list returned invalid toolsError")
+
+    tool_names = sorted(tools)
+    canonical_tools = json.dumps(
+        tools,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    catalog_hash = hashlib.sha256(canonical_tools).hexdigest()
+    prefix = f"server:{name}"
+
+    data[f"{prefix}:runtime_status"] = runtime_status
+    data[f"{prefix}:auth_status"] = auth_status
+    data[f"{prefix}:plugin_id"] = plugin_id
+    data[f"{prefix}:http_origin"] = http_origin
+    data[f"{prefix}:tool_count"] = len(tool_names)
+    data[f"{prefix}:tools"] = json.dumps(tool_names, separators=(",", ":"))
+    data[f"{prefix}:tool_catalog_status"] = (
+        "error" if tools_error is not None else "available"
+    )
+    data[f"{prefix}:tool_catalog_sha256"] = f"sha256:{catalog_hash}"
+
+
+def _query_mcp_evidence(
+    stdin: TextIO,
+    output: queue.Queue[str | None],
+    *,
+    thread_id: str,
+    deadline: float,
+) -> EvidenceRecord:
+    data: dict[str, JsonScalar] = {}
+    seen_names: set[str] = set()
+    seen_cursors: set[str] = set()
+    cursor: str | None = None
+    request_id = 4
+
+    while True:
+        params: dict[str, object] = {
+            "limit": 100,
+            "detail": "toolsAndAuthOnly",
+            "threadId": thread_id,
+        }
+        if cursor is not None:
+            params["cursor"] = cursor
+
+        _send_message(
+            stdin,
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "mcpServerStatus/list",
+                "params": params,
+            },
+        )
+        result = _read_response(output, request_id=request_id, deadline=deadline)
+        request_id += 1
+
+        servers = result.get("data")
+        if not isinstance(servers, list):
+            raise CollectionError("codex mcpServerStatus/list returned no data array")
+
+        for server in servers:
+            if not isinstance(server, dict):
+                raise CollectionError(
+                    "codex mcpServerStatus/list returned a non-object server"
+                )
+            _mcp_server_data(
+                server,
+                data=data,
+                seen_names=seen_names,
+            )
+
+        next_cursor = result.get("nextCursor")
+        if next_cursor is None:
+            break
+        if not isinstance(next_cursor, str) or not next_cursor:
+            raise CollectionError("codex mcpServerStatus/list returned invalid nextCursor")
+        if next_cursor in seen_cursors:
+            raise CollectionError("codex mcpServerStatus/list repeated a pagination cursor")
+
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+
+    data["server_count"] = len(seen_names)
+    return EvidenceRecord(
+        plane="live",
+        kind="codex.mcp",
+        source=EvidenceSource(
+            collector="codex",
+            method="app-server mcpServerStatus/list",
+        ),
+        data=data,
+    )
+
+
 def _query_codex_state(
     binary: Path,
     cwd: Path,
     *,
     timeout: float,
     resolve_thread: bool,
-) -> tuple[dict[str, object], EvidenceRecord | None, tuple[str, ...] | None]:
+    resolve_mcp: bool,
+) -> tuple[
+    dict[str, object],
+    EvidenceRecord | None,
+    tuple[str, ...] | None,
+    EvidenceRecord | None,
+]:
     try:
         process = subprocess.Popen(
             [str(binary), "app-server"],
@@ -335,7 +495,8 @@ def _query_codex_state(
 
         thread_evidence: EvidenceRecord | None = None
         instruction_sources: tuple[str, ...] | None = None
-        if resolve_thread:
+        mcp_evidence: EvidenceRecord | None = None
+        if resolve_thread or resolve_mcp:
             _send_message(
                 process.stdin,
                 {
@@ -355,7 +516,15 @@ def _query_codex_state(
                 instruction_sources=instruction_sources,
             )
 
-        return config, thread_evidence, instruction_sources
+            if resolve_mcp:
+                mcp_evidence = _query_mcp_evidence(
+                    process.stdin,
+                    output,
+                    thread_id=_thread_id(thread_result),
+                    deadline=deadline,
+                )
+
+        return config, thread_evidence, instruction_sources, mcp_evidence
     finally:
         with contextlib.suppress(OSError):
             process.stdin.close()
@@ -368,8 +537,9 @@ def collect_codex_runtime(
     codex_binary: str | None = None,
     timeout: float = 5.0,
     resolve_thread: bool = False,
+    resolve_mcp: bool = False,
 ) -> tuple[EvidenceRecord, ...]:
-    """Collect Codex runtime/config evidence and optional effective thread state."""
+    """Collect Codex runtime/config evidence and optional effective runtime state."""
     requested_cwd = Path(cwd).expanduser()
     if not requested_cwd.exists():
         raise CollectionError(f"Codex working directory does not exist: {cwd!r}")
@@ -379,11 +549,12 @@ def collect_codex_runtime(
     resolved_cwd = requested_cwd.resolve()
     binary = _resolve_codex_binary(codex_binary)
     version = _run_codex_version(binary, timeout=timeout)
-    config, thread, instruction_sources = _query_codex_state(
+    config, thread, instruction_sources, mcp = _query_codex_state(
         binary,
         resolved_cwd,
         timeout=timeout,
         resolve_thread=resolve_thread,
+        resolve_mcp=resolve_mcp,
     )
 
     config_data: dict[str, JsonScalar] = {
@@ -425,4 +596,6 @@ def collect_codex_runtime(
                 cwd=resolved_cwd,
             )
         )
+    if mcp is not None:
+        records.append(mcp)
     return tuple(records)

@@ -243,3 +243,60 @@ def test_missing_field_is_distinct_from_null() -> None:
             "  branch: <missing> -> null",
         ]
     )
+
+
+def test_codex_mcp_diff_reports_tool_catalog_change() -> None:
+    source = EvidenceSource(
+        collector="codex",
+        method="app-server mcpServerStatus/list",
+    )
+    target = Target(kind="codex.workspace", identifier="/srv/agent")
+
+    before = Snapshot.capture(
+        target=target,
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="codex.mcp",
+                source=source,
+                data={
+                    "server_count": 1,
+                    "server:docs:runtime_status": "connected",
+                    "server:docs:auth_status": "unsupported",
+                    "server:docs:tool_count": 1,
+                    "server:docs:tools": '["search"]',
+                    "server:docs:tool_catalog_sha256": "sha256:" + "a" * 64,
+                },
+            ),
+        ),
+    )
+    after = Snapshot.capture(
+        target=target,
+        evidence=(
+            EvidenceRecord(
+                plane="live",
+                kind="codex.mcp",
+                source=source,
+                data={
+                    "server_count": 1,
+                    "server:docs:runtime_status": "connected",
+                    "server:docs:auth_status": "unsupported",
+                    "server:docs:tool_count": 2,
+                    "server:docs:tools": '["fetch","search"]',
+                    "server:docs:tool_catalog_sha256": "sha256:" + "b" * 64,
+                },
+            ),
+        ),
+    )
+
+    assert format_diff(diff_snapshots(before, after)) == "\n".join(
+        [
+            "CODEX MCP",
+            "  server:docs:tool_catalog_sha256: sha256:"
+            + "a" * 64
+            + " -> sha256:"
+            + "b" * 64,
+            "  server:docs:tool_count: 1 -> 2",
+            '  server:docs:tools: ["search"] -> ["fetch","search"]',
+        ]
+    )
