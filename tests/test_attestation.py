@@ -11,12 +11,12 @@ from runtimetruth.attestation import (
     PREDICATE_TYPE,
     STATEMENT_TYPE,
     AttestationError,
-    build_predicate,
+    build_statement,
     canonical_snapshot_bytes,
     create_signed_attestation,
     load_bundle_statement,
-    predicate_bytes,
     snapshot_sha256,
+    statement_bytes,
     validate_statement,
     verify_signed_attestation,
 )
@@ -47,19 +47,7 @@ def _snapshot(*, head: str = "a" * 40) -> Snapshot:
 
 
 def _statement(snapshot: Snapshot) -> dict[str, object]:
-    return {
-        "_type": STATEMENT_TYPE,
-        "subject": [
-            {
-                "name": "runtimetruth-baseline.json",
-                "digest": {
-                    "sha256": snapshot_sha256(snapshot),
-                },
-            }
-        ],
-        "predicateType": PREDICATE_TYPE,
-        "predicate": build_predicate(snapshot),
-    }
+    return build_statement(snapshot)
 
 
 def _write_bundle(path, statement: dict[str, object]) -> None:
@@ -108,15 +96,24 @@ def test_canonical_digest_changes_when_baseline_changes() -> None:
     assert snapshot_sha256(_snapshot()) != snapshot_sha256(_snapshot(head="b" * 40))
 
 
-def test_predicate_is_minimal_and_canonical() -> None:
+def test_statement_is_minimal_and_canonical() -> None:
     snapshot = _snapshot()
 
-    assert build_predicate(snapshot) == {
+    statement = build_statement(snapshot)
+    assert statement["_type"] == STATEMENT_TYPE
+    assert statement["predicateType"] == PREDICATE_TYPE
+    assert statement["subject"] == [
+        {
+            "name": "runtimetruth-baseline",
+            "digest": {"sha256": snapshot_sha256(snapshot)},
+        }
+    ]
+    assert statement["predicate"] == {
         "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
         "snapshot_schema_version": 1,
         "canonicalization": CANONICALIZATION,
     }
-    assert predicate_bytes(snapshot) == rfc8785.dumps(build_predicate(snapshot))
+    assert statement_bytes(snapshot) == rfc8785.dumps(statement)
 
 
 def test_validate_statement_accepts_exact_baseline_binding() -> None:
@@ -205,10 +202,10 @@ def test_create_signed_attestation_uses_native_cosign_attest_blob(
     def fake_run(args, **kwargs):
         calls.append(args)
         canonical_path = args[-1]
-        predicate_path = args[args.index("--predicate") + 1]
+        statement_path = args[args.index("--statement") + 1]
 
         assert open(canonical_path, "rb").read() == canonical_snapshot_bytes(snapshot)
-        assert open(predicate_path, "rb").read() == predicate_bytes(snapshot)
+        assert open(statement_path, "rb").read() == statement_bytes(snapshot)
 
         _write_bundle(bundle, _statement(snapshot))
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
@@ -222,7 +219,7 @@ def test_create_signed_attestation_uses_native_cosign_attest_blob(
 
     assert digest == snapshot_sha256(snapshot)
     assert calls[0][0:2] == ["/usr/bin/cosign", "attest-blob"]
-    assert calls[0][calls[0].index("--type") + 1] == PREDICATE_TYPE
+    assert calls[0][calls[0].index("--statement") + 1].endswith("statement.json")
     assert calls[0][calls[0].index("--bundle") + 1] == str(bundle)
     assert "--yes" in calls[0]
 
