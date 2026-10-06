@@ -1,7 +1,5 @@
-import base64
 import json
 import subprocess
-from pathlib import Path
 
 import pytest
 import rfc8785
@@ -11,15 +9,19 @@ from runtimetruth.attestation import (
     CANONICALIZATION,
     PREDICATE_TYPE,
     STATEMENT_TYPE,
+    SUBJECT_NAME,
     AttestationError,
     build_statement,
     canonical_snapshot_bytes,
     create_signed_attestation,
-    load_bundle_statement,
+    load_statement,
+    sign_statement,
     snapshot_sha256,
     statement_bytes,
     validate_statement,
     verify_signed_attestation,
+    verify_statement_signature,
+    write_statement,
 )
 from runtimetruth.model import EvidenceRecord, EvidenceSource, Snapshot, Target
 
@@ -44,28 +46,6 @@ def _snapshot(*, head: str = "a" * 40) -> Snapshot:
                 },
             ),
         ),
-    )
-
-
-def _statement(snapshot: Snapshot) -> dict[str, object]:
-    return build_statement(snapshot)
-
-
-def _write_bundle(path, statement: dict[str, object]) -> None:
-    payload = json.dumps(statement, separators=(",", ":"), sort_keys=True).encode()
-    path.write_text(
-        json.dumps(
-            {
-                "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
-                "dsseEnvelope": {
-                    "payload": base64.b64encode(payload).decode(),
-                    "payloadType": "application/vnd.in-toto+json",
-                    "signatures": [{"sig": "test"}],
-                },
-                "verificationMaterial": {},
-            }
-        ),
-        encoding="utf-8",
     )
 
 
@@ -101,30 +81,74 @@ def test_statement_is_minimal_and_canonical() -> None:
     snapshot = _snapshot()
 
     statement = build_statement(snapshot)
-    assert statement["_type"] == STATEMENT_TYPE
-    assert statement["predicateType"] == PREDICATE_TYPE
-    assert statement["subject"] == [
-        {
-            "name": "runtimetruth-baseline",
-            "digest": {"sha256": snapshot_sha256(snapshot)},
-        }
-    ]
-    assert statement["predicate"] == {
-        "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
-        "snapshot_schema_version": 1,
-        "canonicalization": CANONICALIZATION,
+
+    assert statement == {
+        "_type": STATEMENT_TYPE,
+        "subject": [
+            {
+                "name": SUBJECT_NAME,
+                "digest": {"sha256": snapshot_sha256(snapshot)},
+            }
+        ],
+        "predicateType": PREDICATE_TYPE,
+        "predicate": {
+            "attestation_schema_version": ATTESTATION_SCHEMA_VERSION,
+            "snapshot_schema_version": 1,
+            "canonicalization": CANONICALIZATION,
+        },
     }
     assert statement_bytes(snapshot) == rfc8785.dumps(statement)
+
+
+def test_write_and_load_statement_round_trip(tmp_path) -> None:
+    snapshot = _snapshot()
+    statement_path = tmp_path / "baseline.intoto.json"
+
+    digest = write_statement(snapshot, str(statement_path))
+
+    assert digest == snapshot_sha256(snapshot)
+    assert statement_path.read_bytes() == statement_bytes(snapshot)
+    assert load_statement(str(statement_path)) == build_statement(snapshot)
+
+
+def test_write_statement_refuses_overwrite(tmp_path) -> None:
+    statement_path = tmp_path / "baseline.intoto.json"
+    statement_path.write_text("existing", encoding="utf-8")
+
+    with pytest.raises(AttestationError, match="refusing to overwrite"):
+        write_statement(_snapshot(), str(statement_path))
+
+
+def test_load_statement_rejects_noncanonical_json(tmp_path) -> None:
+    statement_path = tmp_path / "baseline.intoto.json"
+    statement_path.write_text(
+        json.dumps(build_statement(_snapshot()), indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AttestationError, match="not RFC 8785 canonical JSON"):
+        load_statement(str(statement_path))
+
+
+def test_load_statement_rejects_duplicate_json_keys(tmp_path) -> None:
+    statement_path = tmp_path / "baseline.intoto.json"
+    statement_path.write_text(
+        '{"_type":"a","_type":"b","subject":[],"predicateType":"x","predicate":{}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AttestationError, match="duplicate JSON object key"):
+        load_statement(str(statement_path))
 
 
 def test_validate_statement_accepts_exact_baseline_binding() -> None:
     snapshot = _snapshot()
 
-    assert validate_statement(_statement(snapshot), snapshot) == snapshot_sha256(snapshot)
+    assert validate_statement(build_statement(snapshot), snapshot) == snapshot_sha256(snapshot)
 
 
 def test_validate_statement_rejects_different_baseline_digest() -> None:
-    statement = _statement(_snapshot())
+    statement = build_statement(_snapshot())
 
     with pytest.raises(AttestationError, match="does not match"):
         validate_statement(statement, _snapshot(head="b" * 40))
@@ -144,56 +168,17 @@ def test_validate_statement_rejects_different_baseline_digest() -> None:
 )
 def test_validate_statement_rejects_schema_or_trust_mutations(mutation) -> None:
     snapshot = _snapshot()
-    statement = _statement(snapshot)
+    statement = build_statement(snapshot)
     mutation(statement)
 
     with pytest.raises(AttestationError):
         validate_statement(statement, snapshot)
 
 
-def test_load_bundle_statement_decodes_dsse_payload(tmp_path) -> None:
-    bundle = tmp_path / "bundle.sigstore.json"
-    statement = _statement(_snapshot())
-    _write_bundle(bundle, statement)
-
-    assert load_bundle_statement(str(bundle)) == statement
-
-
-def test_load_bundle_statement_rejects_duplicate_json_keys(tmp_path) -> None:
-    bundle = tmp_path / "bundle.sigstore.json"
-    bundle.write_text(
-        '{"dsseEnvelope":{"payload":"e30=","payload":"e30=","payloadType":"application/vnd.in-toto+json"}}',
-        encoding="utf-8",
-    )
-
-    with pytest.raises(AttestationError, match="duplicate JSON object key"):
-        load_bundle_statement(str(bundle))
-
-
-def test_load_bundle_statement_rejects_wrong_payload_type(tmp_path) -> None:
-    bundle = tmp_path / "bundle.sigstore.json"
-    bundle.write_text(
-        json.dumps(
-            {
-                "dsseEnvelope": {
-                    "payload": base64.b64encode(b"{}").decode(),
-                    "payloadType": "application/json",
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(AttestationError, match="payload type"):
-        load_bundle_statement(str(bundle))
-
-
-def test_create_signed_attestation_uses_native_cosign_attest_blob(
-    monkeypatch,
-    tmp_path,
-) -> None:
-    snapshot = _snapshot()
-    bundle = tmp_path / "bundle.sigstore.json"
+def test_sign_statement_uses_cosign_sign_blob(monkeypatch, tmp_path) -> None:
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    statement_path.write_bytes(statement_bytes(_snapshot()))
     calls: list[list[str]] = []
 
     monkeypatch.setattr(
@@ -203,34 +188,64 @@ def test_create_signed_attestation_uses_native_cosign_attest_blob(
 
     def fake_run(args, **kwargs):
         calls.append(args)
-        canonical_path = args[-1]
-        statement_path = args[args.index("--statement") + 1]
+        bundle_path.write_text('{"test":true}', encoding="utf-8")
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
-        assert Path(canonical_path).read_bytes() == canonical_snapshot_bytes(snapshot)
-        assert Path(statement_path).read_bytes() == statement_bytes(snapshot)
+    monkeypatch.setattr("runtimetruth.attestation.subprocess.run", fake_run)
 
-        _write_bundle(bundle, _statement(snapshot))
+    sign_statement(str(statement_path), str(bundle_path))
+
+    assert calls == [
+        [
+            "/usr/bin/cosign",
+            "sign-blob",
+            str(statement_path),
+            "--bundle",
+            str(bundle_path),
+            "--yes",
+        ]
+    ]
+    assert bundle_path.is_file()
+
+
+def test_create_signed_attestation_writes_statement_and_bundle(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    snapshot = _snapshot()
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+
+    monkeypatch.setattr(
+        "runtimetruth.attestation._resolve_cosign",
+        lambda command: "/usr/bin/cosign",
+    )
+
+    def fake_run(args, **kwargs):
+        assert args[0:2] == ["/usr/bin/cosign", "sign-blob"]
+        assert statement_path.read_bytes() == statement_bytes(snapshot)
+        bundle_path.write_text('{"test":true}', encoding="utf-8")
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("runtimetruth.attestation.subprocess.run", fake_run)
 
     digest = create_signed_attestation(
         snapshot,
-        bundle_path=str(bundle),
+        statement_path=str(statement_path),
+        bundle_path=str(bundle_path),
     )
 
     assert digest == snapshot_sha256(snapshot)
-    assert calls[0][0:2] == ["/usr/bin/cosign", "attest-blob"]
-    assert calls[0][calls[0].index("--statement") + 1].endswith("statement.json")
-    assert calls[0][calls[0].index("--bundle") + 1] == str(bundle)
-    assert "--yes" in calls[0]
+    assert statement_path.read_bytes() == statement_bytes(snapshot)
+    assert bundle_path.is_file()
 
 
-def test_create_signed_attestation_removes_partial_bundle_on_failure(
+def test_create_signed_attestation_removes_partial_outputs_on_failure(
     monkeypatch,
     tmp_path,
 ) -> None:
-    bundle = tmp_path / "bundle.sigstore.json"
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
 
     monkeypatch.setattr(
         "runtimetruth.attestation._resolve_cosign",
@@ -238,29 +253,32 @@ def test_create_signed_attestation_removes_partial_bundle_on_failure(
     )
 
     def fake_run(args, **kwargs):
-        bundle.write_text("partial", encoding="utf-8")
+        bundle_path.write_text("partial", encoding="utf-8")
         return subprocess.CompletedProcess(
             args=args,
             returncode=1,
             stdout="",
-            stderr="attestation failed",
+            stderr="signing failed",
         )
 
     monkeypatch.setattr("runtimetruth.attestation.subprocess.run", fake_run)
 
-    with pytest.raises(AttestationError, match="attest-blob failed"):
-        create_signed_attestation(_snapshot(), bundle_path=str(bundle))
+    with pytest.raises(AttestationError, match="sign-blob failed"):
+        create_signed_attestation(
+            _snapshot(),
+            statement_path=str(statement_path),
+            bundle_path=str(bundle_path),
+        )
 
-    assert not bundle.exists()
+    assert not statement_path.exists()
+    assert not bundle_path.exists()
 
 
-def test_verify_signed_attestation_checks_identity_digest_and_predicate(
-    monkeypatch,
-    tmp_path,
-) -> None:
-    snapshot = _snapshot()
-    bundle = tmp_path / "bundle.sigstore.json"
-    _write_bundle(bundle, _statement(snapshot))
+def test_verify_statement_signature_pins_identity(monkeypatch, tmp_path) -> None:
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    statement_path.write_bytes(statement_bytes(_snapshot()))
+    bundle_path.write_text('{"test":true}', encoding="utf-8")
     calls: list[list[str]] = []
 
     monkeypatch.setattr(
@@ -270,15 +288,13 @@ def test_verify_signed_attestation_checks_identity_digest_and_predicate(
 
     def fake_run(args, **kwargs):
         calls.append(args)
-        canonical_path = args[-1]
-        assert Path(canonical_path).read_bytes() == canonical_snapshot_bytes(snapshot)
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("runtimetruth.attestation.subprocess.run", fake_run)
 
-    digest = verify_signed_attestation(
-        snapshot,
-        str(bundle),
+    verify_statement_signature(
+        str(statement_path),
+        str(bundle_path),
         certificate_identity=(
             "https://github.com/sidelobe-labs/runtimetruth/"
             ".github/workflows/attest.yml@refs/heads/main"
@@ -286,9 +302,12 @@ def test_verify_signed_attestation_checks_identity_digest_and_predicate(
         certificate_oidc_issuer="https://token.actions.githubusercontent.com",
     )
 
-    assert digest == snapshot_sha256(snapshot)
-    assert calls[0][0:2] == ["/usr/bin/cosign", "verify-blob-attestation"]
-    assert calls[0][calls[0].index("--type") + 1] == PREDICATE_TYPE
+    assert calls[0][0:3] == [
+        "/usr/bin/cosign",
+        "verify-blob",
+        str(statement_path),
+    ]
+    assert calls[0][calls[0].index("--bundle") + 1] == str(bundle_path)
     assert calls[0][calls[0].index("--certificate-identity") + 1].startswith(
         "https://github.com/sidelobe-labs/runtimetruth/"
     )
@@ -297,13 +316,49 @@ def test_verify_signed_attestation_checks_identity_digest_and_predicate(
     )
 
 
-def test_verify_signed_attestation_fails_closed_on_identity_error(
+def test_verify_signed_attestation_checks_signature_before_baseline(
     monkeypatch,
     tmp_path,
 ) -> None:
     snapshot = _snapshot()
-    bundle = tmp_path / "bundle.sigstore.json"
-    _write_bundle(bundle, _statement(snapshot))
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    statement_path.write_bytes(statement_bytes(snapshot))
+    bundle_path.write_text('{"test":true}', encoding="utf-8")
+    events: list[str] = []
+
+    monkeypatch.setattr(
+        "runtimetruth.attestation.verify_statement_signature",
+        lambda *args, **kwargs: events.append("signature"),
+    )
+    original_load = load_statement
+
+    def observed_load(path):
+        events.append("statement")
+        return original_load(path)
+
+    monkeypatch.setattr("runtimetruth.attestation.load_statement", observed_load)
+
+    digest = verify_signed_attestation(
+        snapshot,
+        statement_path=str(statement_path),
+        bundle_path=str(bundle_path),
+        certificate_identity="expected",
+        certificate_oidc_issuer="https://issuer.example",
+    )
+
+    assert digest == snapshot_sha256(snapshot)
+    assert events == ["signature", "statement"]
+
+
+def test_verify_signed_attestation_fails_closed_on_identity_error(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    statement_path.write_bytes(statement_bytes(_snapshot()))
+    bundle_path.write_text('{"test":true}', encoding="utf-8")
 
     monkeypatch.setattr(
         "runtimetruth.attestation._resolve_cosign",
@@ -321,16 +376,20 @@ def test_verify_signed_attestation_fails_closed_on_identity_error(
 
     with pytest.raises(AttestationError, match="identity mismatch"):
         verify_signed_attestation(
-            snapshot,
-            str(bundle),
+            _snapshot(),
+            statement_path=str(statement_path),
+            bundle_path=str(bundle_path),
             certificate_identity="expected",
             certificate_oidc_issuer="https://issuer.example",
         )
 
 
 def test_cosign_missing_is_error(monkeypatch, tmp_path) -> None:
-    bundle = tmp_path / "bundle.sigstore.json"
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    statement_path.write_bytes(statement_bytes(_snapshot()))
+
     monkeypatch.setattr("runtimetruth.attestation.shutil.which", lambda command: None)
 
     with pytest.raises(AttestationError, match="executable not found"):
-        create_signed_attestation(_snapshot(), bundle_path=str(bundle))
+        sign_statement(str(statement_path), str(bundle_path))
