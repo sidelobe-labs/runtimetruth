@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from runtimetruth.collectors.codex import collect_codex_runtime
+from runtimetruth.collectors.codex import _mcp_server_data, collect_codex_runtime
 from runtimetruth.collectors.errors import CollectionError
 from runtimetruth.model import EvidenceSource
 
@@ -397,3 +397,36 @@ def test_collector_rejects_malformed_config_response(tmp_path: Path) -> None:
             str(workspace),
             codex_binary=str(executable),
         )
+
+
+def test_large_mcp_catalog_omits_tool_names_but_keeps_fingerprint() -> None:
+    tools = {
+        f"tool_{index:03d}": {
+            "description": "DO NOT SERIALIZE",
+            "inputSchema": {"type": "object"},
+        }
+        for index in range(51)
+    }
+    data = {}
+    _mcp_server_data(
+        {
+            "name": "large",
+            "runtimeStatus": "connected",
+            "pluginId": None,
+            "httpOrigin": None,
+            "tools": tools,
+            "toolsError": None,
+            "authStatus": "unsupported",
+        },
+        data=data,
+        seen_names=set(),
+    )
+
+    assert data["server:large:tool_count"] == 51
+    assert data["server:large:tool_names_included"] is False
+    assert "server:large:tools" not in data
+    assert str(data["server:large:tool_catalog_sha256"]).startswith("sha256:")
+
+    serialized = json.dumps(data)
+    assert "DO NOT SERIALIZE" not in serialized
+    assert "inputSchema" not in serialized
