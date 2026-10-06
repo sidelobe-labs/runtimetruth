@@ -7,7 +7,11 @@ import sys
 from collections.abc import Callable
 
 from runtimetruth import __version__
-from runtimetruth.collectors import CollectionError, collect_git_repository
+from runtimetruth.collectors import (
+    CollectionError,
+    collect_codex_runtime,
+    collect_git_repository,
+)
 from runtimetruth.collectors.systemd import validate_systemd_unit_name
 from runtimetruth.diff import DiffError, diff_snapshots, format_diff, load_snapshot
 from runtimetruth.inspection import inspect_systemd_runtime
@@ -50,6 +54,21 @@ def _inspect_git(args: argparse.Namespace) -> int:
     return 0
 
 
+def _inspect_codex(args: argparse.Namespace) -> int:
+    evidence = collect_codex_runtime(args.path)
+    config = evidence[1]
+    cwd = config.data["cwd"]
+    if not isinstance(cwd, str):
+        raise CollectionError("Codex working directory identity has an invalid type")
+
+    snapshot = Snapshot.capture(
+        target=Target(kind="codex.workspace", identifier=cwd),
+        evidence=evidence,
+    )
+    print(snapshot.to_json(pretty=args.pretty))
+    return 0
+
+
 def _diff(args: argparse.Namespace) -> int:
     before = load_snapshot(args.before)
     after = load_snapshot(args.after)
@@ -79,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command")
     inspect_parser = commands.add_parser(
         "inspect",
-        help="Collect live evidence for one runtime target.",
+        help="Collect runtime evidence for one target.",
     )
     inspect_targets = inspect_parser.add_subparsers(dest="target_kind", required=True)
 
@@ -98,6 +117,14 @@ def build_parser() -> argparse.ArgumentParser:
     git_parser.add_argument("path")
     _add_pretty_argument(git_parser)
     git_parser.set_defaults(handler=_inspect_git)
+
+    codex_parser = inspect_targets.add_parser(
+        "codex",
+        help="Inspect effective Codex runtime configuration for a working directory.",
+    )
+    codex_parser.add_argument("path", nargs="?", default=".")
+    _add_pretty_argument(codex_parser)
+    codex_parser.set_defaults(handler=_inspect_codex)
 
     diff_parser = commands.add_parser(
         "diff",

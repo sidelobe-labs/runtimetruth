@@ -81,6 +81,44 @@ def test_git_inspect_emits_snapshot_json(monkeypatch, capsys) -> None:
     assert payload["evidence"][0]["data"]["head_commit"] == "a" * 40
 
 
+def test_codex_inspect_separates_live_and_resolved_evidence(monkeypatch, capsys) -> None:
+    runtime = EvidenceRecord(
+        plane="live",
+        kind="codex.runtime",
+        source=EvidenceSource(collector="codex", method="codex --version"),
+        data={
+            "binary": "/usr/bin/codex",
+            "version": "codex-cli 0.test",
+        },
+    )
+    config = EvidenceRecord(
+        plane="resolved",
+        kind="codex.config",
+        source=EvidenceSource(collector="codex", method="app-server config/read"),
+        data={
+            "cwd": "/srv/agent",
+            "model": "gpt-test",
+            "sandbox_mode": "workspace-write",
+        },
+    )
+    monkeypatch.setattr(
+        "runtimetruth.cli.collect_codex_runtime",
+        lambda path: (runtime, config),
+    )
+
+    assert main(["inspect", "codex", "/srv/agent"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["target"] == {
+        "kind": "codex.workspace",
+        "identifier": "/srv/agent",
+    }
+    assert [(item["kind"], item["plane"]) for item in payload["evidence"]] == [
+        ("codex.runtime", "live"),
+        ("codex.config", "resolved"),
+    ]
+
+
 def test_diff_command_renders_semantic_changes(capsys) -> None:
     assert (
         main(
