@@ -204,3 +204,27 @@ def test_diff_command_renders_semantic_changes(capsys) -> None:
     assert "PROCESS\n" in output
     assert "CODE\n" in output
     assert "head_commit:" in output
+
+
+def test_verify_pass_returns_zero(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+
+    assert main(["verify", baseline, baseline]) == 0
+
+    assert capsys.readouterr().out == "PASS: runtime matches baseline.\n"
+
+
+def test_verify_drift_returns_two_and_renders_diff(capsys) -> None:
+    baseline = str(_FIXTURES / "before.json")
+    current = str(_FIXTURES / "after.json")
+
+    assert main(["verify", baseline, current]) == 2
+
+    output = capsys.readouterr().out
+    assert output.startswith("DRIFT: runtime differs from baseline.\n\n")
+    assert "SERVICE\n" in output
+    assert "CODE\n" in output
+    assert (
+        "head_commit: 1111111111111111111111111111111111111111 -> "
+        "2222222222222222222222222222222222222222"
+    ) in output
