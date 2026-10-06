@@ -200,9 +200,7 @@ def _verify_attestation(args: argparse.Namespace) -> int:
     )
 
     if args.current is not None and args.codex is not None:
-        raise DiffError(
-            "verify-attestation accepts either a current snapshot or --codex, not both"
-        )
+        raise DiffError("verify-attestation accepts either a current snapshot or --codex, not both")
     if args.current is None and args.codex is None:
         raise DiffError("verify-attestation requires a current snapshot or --codex")
 
@@ -403,10 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_attestation_parser = commands.add_parser(
         "verify-attestation",
-        help=(
-            "Verify signer identity and baseline attestation before comparing "
-            "the current runtime."
-        ),
+        help=("Verify signer identity and baseline attestation before comparing the current runtime."),
     )
     verify_attestation_parser.add_argument("baseline")
     verify_attestation_parser.add_argument("current", nargs="?")
