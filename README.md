@@ -4,11 +4,11 @@
 
 _An open-source Sidelobe project._
 
-[Project case study](https://sidelobe.dev/open-source/runtimetruth/) · [Engineering case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [v0.2.0 release](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.0)
+[PyPI](https://pypi.org/project/runtimetruth/) · [Project case study](https://sidelobe.dev/open-source/runtimetruth/) · [Engineering case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [v0.2.0 release](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.0)
 
 RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
 
-> Status: v0.2.0 pre-release. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, persisted verification policy and identity-backed signed-baseline verification have been validated in CI and against real local runtimes.
+> Status: v0.2.0 public alpha release, available on PyPI. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, persisted verification policy and identity-backed signed-baseline verification have been validated in CI and against real local runtimes.
 
 ## Why
 
@@ -30,7 +30,7 @@ RuntimeTruth currently focuses on two questions:
 1. **What runtime state can be established with explicit evidence?**
 2. **What changed since a known baseline?**
 
-Broader policy evaluation and organizational provenance remain later phases.
+Broader policy evaluation and organizational provenance remain later phases. The current policy file is intentionally narrow: it persists only the evidence selectors that should gate runtime verification.
 
 ## Project model
 
