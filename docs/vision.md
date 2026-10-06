@@ -16,6 +16,8 @@ RuntimeTruth should make three states explicit:
 
 Drift between these states should be observable, explainable, machine-readable, and suitable for CI or policy enforcement.
 
+The product boundary is **agent runtime verification**, not generic runtime security or observability. Process, repository, MCP and configuration collectors are evidence sources; they are not the product by themselves.
+
 ## Core questions
 
 - What agent runtime is live?
@@ -30,9 +32,18 @@ Drift between these states should be observable, explainable, machine-readable, 
 - **Deterministic core.** Runtime verification must not require an LLM.
 - **Local-first.** Useful OSS functionality must work without a cloud account.
 - **Secrets stay secrets.** Fingerprint sensitive values; do not collect plaintext unnecessarily.
-- **Adapter-based.** Codex, Claude Code, custom agents, systemd and containers should plug into a common model.
+- **Adapter-based, not adapter-driven.** Add an adapter only when it proves a useful runtime fact that the common model can represent.
 - **Explain drift, do not hide it behind a score.** Severity and confidence may supplement evidence, never replace it.
 - **Stable snapshot schema first.** The data model is more important than a dashboard.
+- **Reuse established primitives.** Do not rebuild tracing, eBPF monitoring, MCP enforcement or software-supply-chain signing when existing tools already solve those problems.
+
+## Scope boundary
+
+RuntimeTruth is intended to correlate effective agent state across declared, resolved and live evidence.
+
+It is not intended to become a general process monitor, agent tracing platform, MCP firewall, endpoint inventory system, GitOps controller or replacement for software provenance standards.
+
+See [Landscape and positioning](landscape.md) for the adjacent tool categories and the current differentiation hypothesis.
 
 ## Initial user
 
@@ -41,3 +52,5 @@ A developer or small platform team running AI coding/internal agents as long-liv
 ## Longer-term product
 
 The OSS CLI can become the collector/verifier for an optional commercial control plane offering fleet history, policy management, alerts, organization-wide attestations, RBAC, SSO and enterprise integrations.
+
+That layer should only follow evidence that teams need central history or policy management; it should not drive the local data model prematurely.

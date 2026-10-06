@@ -50,12 +50,13 @@ The CLI surface is intentionally provisional until the snapshot schema is proven
 
 ## Initial scope
 
-The first implementation targets local Linux runtimes and systemd-managed agent workers. Broader runtime adapters (containers, CI and hosted agent platforms) come after the core snapshot/diff model is stable.
+The local Linux evidence core is intentionally small. The next validation target is agent-specific effective state, starting with a single Codex adapter rather than broadening into generic runtime observability.
 
 See:
 
 - [Origin](docs/origin.md)
 - [Vision](docs/vision.md)
+- [Landscape and positioning](docs/landscape.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture](docs/architecture.md)
 
