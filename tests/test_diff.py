@@ -69,8 +69,7 @@ def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
                     "approval_policy": "on-request",
                     "instruction_sources": '["/srv/agent/AGENTS.md"]',
                     "sandbox": (
-                        '{"networkAccess":true,"type":"workspaceWrite",'
-                        '"writableRoots":[]}'
+                        '{"networkAccess":true,"type":"workspaceWrite","writableRoots":[]}'
                     ),
                 },
             ),
@@ -105,12 +104,9 @@ def test_codex_snapshot_diff_groups_agent_state_changes() -> None:
                 data={
                     "model": "gpt-6-pro",
                     "approval_policy": "never",
-                    "instruction_sources": (
-                        '["/srv/agent/AGENTS.md","/srv/agent/sub/AGENTS.md"]'
-                    ),
+                    "instruction_sources": ('["/srv/agent/AGENTS.md","/srv/agent/sub/AGENTS.md"]'),
                     "sandbox": (
-                        '{"networkAccess":false,"type":"workspaceWrite",'
-                        '"writableRoots":[]}'
+                        '{"networkAccess":false,"type":"workspaceWrite","writableRoots":[]}'
                     ),
                 },
             ),
