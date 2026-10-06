@@ -84,7 +84,4 @@ def test_snapshot_json_round_trip() -> None:
 
 def test_snapshot_parser_rejects_unknown_schema_version() -> None:
     with pytest.raises(SnapshotFormatError, match="unsupported schema_version"):
-        Snapshot.from_json(
-            '{"schema_version":2,"captured_at":"x","target":{},'
-            '"evidence":[]}'
-        )
+        Snapshot.from_json('{"schema_version":2,"captured_at":"x","target":{},"evidence":[]}')

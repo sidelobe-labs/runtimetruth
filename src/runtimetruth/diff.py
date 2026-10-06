@@ -176,8 +176,7 @@ def format_diff(result: SnapshotDiff) -> str:
 
         for field in change.fields:
             lines.append(
-                f"  {field.field}: "
-                f"{_format_value(field.before)} -> {_format_value(field.after)}"
+                f"  {field.field}: {_format_value(field.before)} -> {_format_value(field.after)}"
             )
 
     return "\n".join(lines)
