@@ -139,7 +139,7 @@ def _safe_config_value(field: str, value: object) -> JsonScalar:
     raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
 
 
-def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
+def _thread_id(result: dict[str, object]) -> str:
     thread = result.get("thread")
     if not isinstance(thread, dict):
         raise CollectionError("codex thread/start returned no thread object")
@@ -147,6 +147,13 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
     thread_id = thread.get("id")
     if not isinstance(thread_id, str) or not thread_id:
         raise CollectionError("codex thread/start returned no thread id")
+    return thread_id
+
+
+def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
+    thread = result.get("thread")
+    if not isinstance(thread, dict):
+        raise CollectionError("codex thread/start returned no thread object")
 
     data: dict[str, JsonScalar] = {}
 
@@ -159,9 +166,7 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
     for source_field, output_field in scalar_fields.items():
         value = result.get(source_field)
         if value is not None and not isinstance(value, (str, int, bool)):
-            raise CollectionError(
-                f"codex thread/start returned invalid {source_field}"
-            )
+            raise CollectionError(f"codex thread/start returned invalid {source_field}")
         data[output_field] = value
 
     approval_policy = result.get("approvalPolicy")
@@ -185,9 +190,7 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
         if not isinstance(instruction_sources, list) or not all(
             isinstance(item, str) for item in instruction_sources
         ):
-            raise CollectionError(
-                "codex thread/start returned invalid instructionSources"
-            )
+            raise CollectionError("codex thread/start returned invalid instructionSources")
         data["instruction_sources"] = json.dumps(
             instruction_sources,
             separators=(",", ":"),
@@ -208,6 +211,28 @@ def _thread_evidence(result: dict[str, object]) -> EvidenceRecord:
         ),
         data=data,
     )
+
+
+def _delete_thread(
+    stdin: TextIO,
+    output: queue.Queue[str | None],
+    *,
+    thread_id: str,
+    request_id: int,
+    deadline: float,
+) -> None:
+    _send_message(
+        stdin,
+        {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "thread/delete",
+            "params": {
+                "threadId": thread_id,
+            },
+        },
+    )
+    _read_response(output, request_id=request_id, deadline=deadline)
 
 
 def _query_codex_state(
@@ -242,7 +267,6 @@ def _query_codex_state(
     )
     reader.start()
     deadline = time.monotonic() + timeout
-    thread_id: str | None = None
 
     try:
         _send_message(
@@ -303,42 +327,35 @@ def _query_codex_state(
                 },
             )
             thread_result = _read_response(output, request_id=3, deadline=deadline)
-            thread_evidence = _thread_evidence(thread_result)
+            thread_id = _thread_id(thread_result)
 
-            thread = thread_result.get("thread")
-            if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
-                raise CollectionError("codex thread/start returned no thread id")
-            thread_id = thread["id"]
+            try:
+                thread_evidence = _thread_evidence(thread_result)
+            except CollectionError:
+                try:
+                    _delete_thread(
+                        process.stdin,
+                        output,
+                        thread_id=thread_id,
+                        request_id=4,
+                        deadline=deadline,
+                    )
+                except CollectionError as cleanup_exc:
+                    raise CollectionError(
+                        "Codex thread probe failed and thread cleanup also failed"
+                    ) from cleanup_exc
+                raise
 
-            _send_message(
+            _delete_thread(
                 process.stdin,
-                {
-                    "jsonrpc": "2.0",
-                    "id": 4,
-                    "method": "thread/delete",
-                    "params": {
-                        "threadId": thread_id,
-                    },
-                },
+                output,
+                thread_id=thread_id,
+                request_id=4,
+                deadline=deadline,
             )
-            _read_response(output, request_id=4, deadline=deadline)
-            thread_id = None
 
         return config, thread_evidence
     finally:
-        if thread_id is not None:
-            with contextlib.suppress(Exception):
-                _send_message(
-                    process.stdin,
-                    {
-                        "jsonrpc": "2.0",
-                        "id": 99,
-                        "method": "thread/delete",
-                        "params": {
-                            "threadId": thread_id,
-                        },
-                    },
-                )
         with contextlib.suppress(OSError):
             process.stdin.close()
         _stop_process(process)
