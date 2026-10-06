@@ -41,17 +41,32 @@ The collector must not silently upgrade an inferred value into a stronger eviden
 
 ## Baseline boundary
 
-A baseline is currently a file selected by the caller.
+Normal `verify` still treats the baseline as a file selected by the caller.
 
-RuntimeTruth does not yet:
+For workflows that need stronger provenance, RuntimeTruth also supports an optional signed-baseline attestation path:
 
-- sign baselines
-- establish who approved them
-- protect them from modification
-- provide a remote source of truth
-- prove that a baseline came from a known deployment
+```text
+baseline
+  -> RFC 8785 canonical SHA-256 digest
+  -> in-toto Statement v1
+  -> DSSE / Sigstore keyless attestation
+  -> exact signer identity verification
+  -> runtime comparison
+```
 
-If an attacker or workflow can replace both the baseline and the current state being checked, baseline verification can be defeated. Protect baseline files with normal repository, review and artifact controls.
+`verify-attestation` fails unless Cosign verifies the Sigstore bundle against the exact expected certificate identity and OIDC issuer, and the signed in-toto subject digest matches the supplied canonical baseline.
+
+This improves baseline integrity and signer provenance, but RuntimeTruth still does **not** establish:
+
+- whether that signer was organizationally authorized to approve the baseline
+- whether the baseline itself is secure or compliant
+- whether the signing identity was compromised
+- whether the baseline came from a particular deployment unless the surrounding workflow establishes that fact
+- whether uncollected runtime state matches the signer's intent
+
+An unsigned baseline can still be replaced by an attacker who controls the verification inputs. A signed baseline can still be malicious or incorrect if the trusted signer approved the wrong state. Treat signer identity configuration and baseline review as security-sensitive inputs.
+
+See [signed baseline attestations](attestation.md).
 
 ## Codex thread boundary
 
