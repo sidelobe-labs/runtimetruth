@@ -94,7 +94,11 @@ The initial contract is deliberately simple:
 - exit `2`: DRIFT
 - exit `1`: ERROR
 
-A baseline is currently just a snapshot selected by the caller. RuntimeTruth does not yet claim baseline signing, authority or tamper evidence.
+Normal baseline verification still accepts a caller-selected snapshot directly.
+
+For stronger provenance, the signed-attestation path canonicalizes the complete baseline with RFC 8785, hashes it with SHA-256, binds that digest into an in-toto Statement v1, and uses Sigstore Cosign to produce a DSSE attestation bundle.
+
+Verification checks exact signer identity + OIDC issuer and the signed subject digest before the existing semantic runtime comparison runs. This proves baseline integrity relative to the expected signing identity; it does not establish organizational approval or baseline safety.
 
 ### Policy
 
@@ -102,7 +106,20 @@ A policy/invariant layer is future work. It should be added only after concrete 
 
 ### Attestation
 
-Portable attestation is a later milestone. Signing and independent verification should reuse established provenance/signing primitives rather than inventing a new trust stack.
+The first attestation vertical slice uses:
+
+- RFC 8785 JSON Canonicalization Scheme
+- SHA-256 baseline digest
+- in-toto Statement v1
+- DSSE
+- Sigstore Cosign keyless signing
+- exact OIDC signer identity verification
+
+RuntimeTruth creates no private-key format and implements no custom signature algorithm.
+
+The signed bundle authenticates a canonical baseline digest. Runtime verification still reuses the normal schema-v1 semantic diff engine after identity and digest checks succeed.
+
+Future attestation work may add portable provenance or approval semantics, but should continue to reuse established signing/attestation standards rather than expanding the cryptographic surface area.
 
 ## Security boundaries
 
