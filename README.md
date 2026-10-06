@@ -4,6 +4,8 @@
 
 _An open-source Sidelobe project._
 
+[Project case study](https://sidelobe.dev/open-source/runtimetruth/) · [Engineering case study](https://artur.panek.tech/work/runtimetruth/) · [v0.1.0 release](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.1.0)
+
 RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
 
 > Status: [v0.1.0](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.1.0) public pre-release. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, selective baseline verification and machine-readable verification reports have been validated against real local runtimes.
