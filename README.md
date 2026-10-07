@@ -2,13 +2,13 @@
 
 **Runtime integrity verification for AI agents.**
 
-[![PyPI](https://img.shields.io/pypi/v/runtimetruth?style=flat-square&label=PyPI)](https://pypi.org/project/runtimetruth/) [![Python](https://img.shields.io/pypi/pyversions/runtimetruth?style=flat-square&label=Python)](https://pypi.org/project/runtimetruth/) [![CI](https://img.shields.io/github/actions/workflow/status/sidelobe-labs/runtimetruth/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/sidelobe-labs/runtimetruth?style=flat-square)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/runtimetruth?style=flat-square&label=PyPI)](https://pypi.org/project/runtimetruth/) [![Python](https://img.shields.io/pypi/pyversions/runtimetruth?style=flat-square&label=Python)](https://pypi.org/project/runtimetruth/) [![CI](https://img.shields.io/github/actions/workflow/status/sidelobe-labs/runtimetruth/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/sidelobe-labs/runtimetruth?style=flat-square)](https://github.com/sidelobe-labs/runtimetruth/blob/main/LICENSE)
 
 RuntimeTruth detects drift between intended and live AI-agent runtime state. It compares evidence from declared, resolved, and live sources across models, instructions, tools, MCP servers, permissions, runtime versions, and the execution environment.
 
-[PyPI](https://pypi.org/project/runtimetruth/) · [Sidelobe overview](https://sidelobe.dev/open-source/runtimetruth/) · [Case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [Release notes](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.0)
+[PyPI](https://pypi.org/project/runtimetruth/) · [Sidelobe overview](https://sidelobe.dev/open-source/runtimetruth/) · [Case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [Release notes](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.1)
 
-> **Public alpha · v0.2.0.** Core inspect, diff, verification, policy, and signed-baseline flows are covered by CI and exercised against real local runtimes.
+> **Public alpha · v0.2.1.** Core inspect, diff, verification, policy, and signed-baseline flows are covered by CI and exercised against real local runtimes.
 
 ## Why
 
