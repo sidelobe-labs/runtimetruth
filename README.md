@@ -38,7 +38,7 @@ RuntimeTruth is currently distributed as free, local-first open-source software.
 
 A verification result is deliberately narrow: **PASS means the selected evidence matched the selected baseline.** It does not mean the agent is secure, compliant, safe, or correctly configured in ways RuntimeTruth did not inspect.
 
-See the [trust model](docs/trust-model.md), [data handling](docs/data-handling.md), [support policy](SUPPORT.md), and [MIT License](LICENSE) for the current project boundary.
+See the [trust model](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/trust-model.md), [data handling](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/data-handling.md), [support policy](https://github.com/sidelobe-labs/runtimetruth/blob/main/SUPPORT.md), and [MIT License](https://github.com/sidelobe-labs/runtimetruth/blob/main/LICENSE) for the current project boundary.
 
 ## Origin
 
@@ -46,7 +46,7 @@ RuntimeTruth grew out of operating self-hosted workers and noticing that source 
 
 The project is built from evidence outward. It started with systemd, procfs, and Git identity, then used the same model to inspect agent-specific Codex state.
 
-[Read the origin story](docs/origin.md).
+[Read the origin story](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/origin.md).
 
 ## Installation
 
@@ -74,7 +74,7 @@ Then verify the install:
 runtimetruth --version
 ```
 
-For CI workflows that require an exact source revision, pin the Git commit rather than following a moving branch. See [CI integration](docs/ci.md).
+For CI workflows that require an exact source revision, pin the Git commit rather than following a moving branch. See [CI integration](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/ci.md).
 
 ## Quick start
 
@@ -137,7 +137,7 @@ runtimetruth verify-attestation \
   --resolve-thread
 ```
 
-Attestation uses RFC 8785 canonical JSON, SHA-256, in-toto Statement v1 and Sigstore Cosign rather than a RuntimeTruth-specific signature scheme. See [signed baseline attestations](docs/attestation.md).
+Attestation uses RFC 8785 canonical JSON, SHA-256, in-toto Statement v1 and Sigstore Cosign rather than a RuntimeTruth-specific signature scheme. See [signed baseline attestations](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/attestation.md).
 
 ## Current CLI
 
@@ -232,19 +232,19 @@ The current focus is external validation of the baseline, attestation and policy
 
 See:
 
-- [Origin](docs/origin.md)
-- [Vision](docs/vision.md)
-- [Landscape and positioning](docs/landscape.md)
-- [Roadmap](docs/roadmap.md)
-- [Architecture](docs/architecture.md)
-- [CI integration](docs/ci.md)
-- [Signed baseline attestations](docs/attestation.md)
-- [Verification policy](docs/policy.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security](SECURITY.md)
-- [Trust model](docs/trust-model.md)
-- [Data handling](docs/data-handling.md)
-- [Support](SUPPORT.md)
+- [Origin](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/origin.md)
+- [Vision](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/vision.md)
+- [Landscape and positioning](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/landscape.md)
+- [Roadmap](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/roadmap.md)
+- [Architecture](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/architecture.md)
+- [CI integration](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/ci.md)
+- [Signed baseline attestations](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/attestation.md)
+- [Verification policy](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/policy.md)
+- [Contributing](https://github.com/sidelobe-labs/runtimetruth/blob/main/CONTRIBUTING.md)
+- [Security](https://github.com/sidelobe-labs/runtimetruth/blob/main/SECURITY.md)
+- [Trust model](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/trust-model.md)
+- [Data handling](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/data-handling.md)
+- [Support](https://github.com/sidelobe-labs/runtimetruth/blob/main/SUPPORT.md)
 
 ## Development
 
