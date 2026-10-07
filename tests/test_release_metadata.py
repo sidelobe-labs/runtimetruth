@@ -33,8 +33,6 @@ def test_readme_markdown_targets_are_portable() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     targets = re.findall(r"\]\(([^)]+)\)", readme)
     allowed_prefixes = ("https://", "http://", "mailto:", "#")
-    relative_targets = [
-        target for target in targets if not target.startswith(allowed_prefixes)
-    ]
+    relative_targets = [target for target in targets if not target.startswith(allowed_prefixes)]
 
     assert relative_targets == []
