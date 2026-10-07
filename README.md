@@ -1,14 +1,14 @@
 # RuntimeTruth
 
-**Verify what your AI agent is actually running.**
+**Runtime integrity verification for AI agents.**
 
-_An open-source Sidelobe project._
+[![PyPI](https://img.shields.io/pypi/v/runtimetruth?style=flat-square&label=PyPI)](https://pypi.org/project/runtimetruth/) [![Python](https://img.shields.io/pypi/pyversions/runtimetruth?style=flat-square&label=Python)](https://pypi.org/project/runtimetruth/) [![CI](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/sidelobe-labs/runtimetruth?style=flat-square)](LICENSE)
 
-[PyPI](https://pypi.org/project/runtimetruth/) · [Project case study](https://sidelobe.dev/open-source/runtimetruth/) · [Engineering case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [v0.2.0 release](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.0)
+RuntimeTruth detects drift between intended and live AI-agent runtime state. It compares evidence from declared, resolved, and live sources across models, instructions, tools, MCP servers, permissions, runtime versions, and the execution environment.
 
-RuntimeTruth is an open-source runtime verification and drift-detection tool for AI agents. It compares evidence from declared, resolved, and live runtime state so teams can identify changes in effective models, instructions, tools, MCP servers, permissions, runtime versions, and execution environment.
+[PyPI](https://pypi.org/project/runtimetruth/) · [Sidelobe overview](https://sidelobe.dev/open-source/runtimetruth/) · [Case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [Release notes](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.0)
 
-> Status: v0.2.0 public alpha release, available on PyPI. The local CLI, schema-v1 snapshots, Codex runtime inspection, semantic diff, persisted verification policy and identity-backed signed-baseline verification have been validated in CI and against real local runtimes.
+> **Public alpha · v0.2.0.** Core inspect, diff, verification, policy, and signed-baseline flows are covered by CI and exercised against real local runtimes.
 
 ## Why
 
