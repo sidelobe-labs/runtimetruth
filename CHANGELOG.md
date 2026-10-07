@@ -6,6 +6,21 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-07
+
+RuntimeTruth v0.2.1 is a release-hygiene patch with no runtime semantics changes.
+
+### Fixed
+
+- README documentation and license links now use portable absolute repository URLs so the package description remains navigable when rendered on PyPI or other external surfaces
+
+### Changed
+
+- package CI and the release workflow now run `twine check --strict` against built distributions before smoke testing or publication
+- release metadata tests keep the package version, CLI version, README public-alpha version, release link, changelog entry and release-notes file in sync
+- README Markdown targets are regression-tested to prevent repository-relative links from leaking into package-index rendering again
+
+
 ## [0.2.0] - 2026-10-06
 
 RuntimeTruth v0.2.0 adds an explicit trust chain for reviewed baselines, persisted runtime policy selectors, and the first normal PyPI distribution path.
