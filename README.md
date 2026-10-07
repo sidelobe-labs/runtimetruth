@@ -2,7 +2,7 @@
 
 **Runtime integrity verification for AI agents.**
 
-[![PyPI](https://img.shields.io/pypi/v/runtimetruth?style=flat-square&label=PyPI)](https://pypi.org/project/runtimetruth/) [![Python](https://img.shields.io/pypi/pyversions/runtimetruth?style=flat-square&label=Python)](https://pypi.org/project/runtimetruth/) [![CI](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/sidelobe-labs/runtimetruth?style=flat-square)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/runtimetruth?style=flat-square&label=PyPI)](https://pypi.org/project/runtimetruth/) [![Python](https://img.shields.io/pypi/pyversions/runtimetruth?style=flat-square&label=Python)](https://pypi.org/project/runtimetruth/) [![CI](https://img.shields.io/github/actions/workflow/status/sidelobe-labs/runtimetruth/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/sidelobe-labs/runtimetruth?style=flat-square)](LICENSE)
 
 RuntimeTruth detects drift between intended and live AI-agent runtime state. It compares evidence from declared, resolved, and live sources across models, instructions, tools, MCP servers, permissions, runtime versions, and the execution environment.
 
