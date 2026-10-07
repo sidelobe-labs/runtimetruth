@@ -23,13 +23,13 @@ There are no runtime-behaviour changes in v0.2.1. The RuntimeTruth trust model, 
 ## Install
 
 ```bash
-pipx install --force runtimetruth==0.2.1
+pipx install runtimetruth==0.2.1
 ```
 
 or:
 
 ```bash
-uv tool install --force runtimetruth==0.2.1
+uv tool install runtimetruth==0.2.1
 ```
 
 Standard virtual-environment installs remain supported:
