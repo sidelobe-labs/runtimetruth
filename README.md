@@ -1,10 +1,10 @@
 # RuntimeTruth
 
-**Runtime integrity verification for AI agents.**
+**Check Codex runtime state against a reviewed baseline.**
 
 [![PyPI](https://img.shields.io/pypi/v/runtimetruth?style=flat-square&label=PyPI)](https://pypi.org/project/runtimetruth/) [![Python](https://img.shields.io/pypi/pyversions/runtimetruth?style=flat-square&label=Python)](https://pypi.org/project/runtimetruth/) [![CI](https://img.shields.io/github/actions/workflow/status/sidelobe-labs/runtimetruth/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/sidelobe-labs/runtimetruth/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/sidelobe-labs/runtimetruth?style=flat-square)](https://github.com/sidelobe-labs/runtimetruth/blob/main/LICENSE)
 
-RuntimeTruth detects drift between intended and live AI-agent runtime state. It compares evidence from declared, resolved, and live sources across models, instructions, tools, MCP servers, permissions, runtime versions, and the execution environment.
+RuntimeTruth collects Codex runtime settings and observations from the local environment. It compares them with a reviewed baseline, including model and permission settings, instruction-file fingerprints, and optional MCP server and tool information.
 
 [PyPI](https://pypi.org/project/runtimetruth/) · [Sidelobe overview](https://sidelobe.dev/open-source/runtimetruth/) · [Case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [Release notes](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.1)
 
@@ -12,7 +12,7 @@ RuntimeTruth detects drift between intended and live AI-agent runtime state. It 
 
 ## Why
 
-AI agents have more mutable runtime state than ordinary applications:
+An agent's effective settings may differ from the values written in its configuration files:
 
 - model and provider routing
 - system and project instructions
@@ -32,7 +32,7 @@ RuntimeTruth currently focuses on two questions:
 
 Broader policy evaluation and organizational provenance remain later phases. The current policy file is intentionally narrow: it persists only the evidence selectors that should gate runtime verification.
 
-## Project model
+## Distribution and limits
 
 RuntimeTruth is currently distributed as free, local-first open-source software. There is no RuntimeTruth hosted control plane, account system, telemetry service, paid support plan or SLA.
 
@@ -210,7 +210,7 @@ Creating or verifying identity-backed attestations requires a recent [Sigstore C
 
 ## Evidence currently collected
 
-The intentionally narrow implementation includes:
+The current implementation collects:
 
 - systemd unit/runtime state
 - procfs process identity
