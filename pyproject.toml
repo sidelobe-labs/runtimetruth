@@ -30,6 +30,8 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://sidelobe.dev/open-source/runtimetruth/"
+CaseStudy = "https://artur.panek.tech/work/runtimetruth/"
+EngineeringNote = "https://artur.panek.tech/notes/ai-agent-config-vs-runtime/"
 Repository = "https://github.com/sidelobe-labs/runtimetruth"
 Issues = "https://github.com/sidelobe-labs/runtimetruth/issues"
 Documentation = "https://github.com/sidelobe-labs/runtimetruth/tree/main/docs"
