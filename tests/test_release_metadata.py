@@ -20,7 +20,9 @@ def test_package_and_cli_versions_match() -> None:
 
 def test_package_summary_matches_current_codex_scope() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    assert data["project"]["description"] == "Check Codex runtime state against a reviewed baseline."
+    assert data["project"]["description"] == (
+        "Check Codex runtime state against a reviewed baseline."
+    )
 
 
 def test_public_release_metadata_matches_package_version() -> None:
