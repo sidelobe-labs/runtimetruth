@@ -6,6 +6,16 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-14
+
+Metadata-only patch. There are no changes to runtime collection, diff, verification or attestation behaviour.
+
+### Changed
+
+- updated the PyPI package summary to describe the supported Codex adapter;
+- republished the current README on PyPI, including the narrower product scope and the limitations of a PASS result;
+- added an automated release path for version changes on `main`, while keeping PyPI Trusted Publishing.
+
 ## [0.2.1] - 2026-10-07
 
 RuntimeTruth v0.2.1 is a release-hygiene patch with no runtime semantics changes.
