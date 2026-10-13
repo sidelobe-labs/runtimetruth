@@ -14,7 +14,7 @@ Metadata-only patch. There are no changes to runtime collection, diff, verificat
 
 - updated the PyPI package summary to describe the supported Codex adapter;
 - republished the current README on PyPI, including the narrower product scope and the limitations of a PASS result;
-- added an automated release path for version changes on `main`, with the existing signed publishing flow retained.
+- added an automated release path for version changes on `main`, while keeping PyPI Trusted Publishing.
 
 ## [0.2.1] - 2026-10-07
 
