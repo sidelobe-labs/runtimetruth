@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "runtimetruth"
-version = "0.2.1"
-description = "Runtime verification and drift detection for AI agents."
+version = "0.2.2"
+description = "Check Codex runtime state against a reviewed baseline."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
