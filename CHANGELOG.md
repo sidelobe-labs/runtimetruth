@@ -6,6 +6,10 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+### Fixed
+
+- report Git discovery errors as collection failures instead of omitting repository evidence from a service snapshot.
+
 ## [0.2.2] - 2026-10-14
 
 Metadata-only patch. There are no changes to runtime collection, diff, verification or attestation behaviour.

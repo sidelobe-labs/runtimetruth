@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -28,6 +29,7 @@ def _run_git(
             capture_output=True,
             text=True,
             timeout=timeout,
+            env={**os.environ, "LC_ALL": "C"},
         )
     except FileNotFoundError as exc:
         raise CollectionError("git is not available on this host") from exc
@@ -38,6 +40,19 @@ def _run_git(
         raise CollectionError(f"git command failed with exit status {completed.returncode}")
 
     return completed
+
+
+def _is_outside_worktree(stderr: str) -> bool:
+    # Git uses exit 128 for both discovery failures and invalid repository state.
+    # Only its explicit no-worktree diagnostics establish that evidence is absent.
+    diagnostic = stderr.splitlines()[0] if stderr else ""
+    return diagnostic in {
+        "fatal: not a git repository (or any of the parent directories): .git",
+        "fatal: this operation must be run in a work tree",
+    } or (
+        diagnostic.startswith("fatal: not a git repository (or any parent up to mount point ")
+        and diagnostic.endswith(")")
+    )
 
 
 def collect_git_repository(path: str, *, timeout: float = 5.0) -> EvidenceRecord:
@@ -58,7 +73,9 @@ def collect_git_repository(path: str, *, timeout: float = 5.0) -> EvidenceRecord
         allowed_returncodes=(0, 128),
     )
     if root_result.returncode == 128:
-        raise NotRepositoryError(f"path is not inside a Git work tree: {path!r}")
+        if _is_outside_worktree(root_result.stderr):
+            raise NotRepositoryError(f"path is not inside a Git work tree: {path!r}")
+        raise CollectionError("git could not resolve the work tree root (exit status 128)")
 
     repository_root = Path(root_result.stdout.strip()).resolve()
 
