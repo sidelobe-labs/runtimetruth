@@ -9,6 +9,7 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 ### Fixed
 
 - report Git discovery errors as collection failures instead of omitting repository evidence from a service snapshot.
+- report boolean-to-integer evidence changes as drift instead of treating `false`/`0` and `true`/`1` as equal.
 
 ## [0.2.2] - 2026-10-14
 

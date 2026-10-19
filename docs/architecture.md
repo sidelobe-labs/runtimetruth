@@ -72,6 +72,8 @@ Additional agent adapters are intentionally deferred until they answer a concret
 
 The schema-v1 diff engine compares supported evidence semantically rather than performing a raw JSON diff. Capture timestamps are ignored, missing values remain distinct from null values, and provenance changes are rejected rather than silently compared.
 
+Boolean values also remain distinct from numbers: changing `false` to `0`, or `true` to `1`, is reported as drift, including when the field is selected with `--protect`.
+
 Supported sections currently include service, process, code, Codex runtime/config/thread, instruction fingerprints and Codex MCP state.
 
 ### Verification
