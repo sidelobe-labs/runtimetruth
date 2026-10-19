@@ -110,7 +110,10 @@ def _diff_record(before: EvidenceRecord, after: EvidenceRecord) -> tuple[FieldCh
         before_value: DiffValue = before.data.get(field, MISSING)
         after_value: DiffValue = after.data.get(field, MISSING)
 
-        if before_value != after_value:
+        # JSON booleans are distinct from numbers, even though False == 0 in Python.
+        if before_value != after_value or isinstance(before_value, bool) != isinstance(
+            after_value, bool
+        ):
             changes.append(
                 FieldChange(
                     field=field,
