@@ -1,5 +1,7 @@
 import json
+import select
 import subprocess
+import sys
 
 import pytest
 import rfc8785
@@ -188,6 +190,7 @@ def test_sign_statement_uses_cosign_sign_blob(monkeypatch, tmp_path) -> None:
 
     def fake_run(args, **kwargs):
         calls.append(args)
+        assert kwargs["capture_output"] is False
         bundle_path.write_text('{"test":true}', encoding="utf-8")
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
@@ -288,6 +291,7 @@ def test_verify_statement_signature_pins_identity(monkeypatch, tmp_path) -> None
 
     def fake_run(args, **kwargs):
         calls.append(args)
+        assert kwargs["capture_output"] is True
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("runtimetruth.attestation.subprocess.run", fake_run)
@@ -393,3 +397,102 @@ def test_cosign_missing_is_error(monkeypatch, tmp_path) -> None:
 
     with pytest.raises(AttestationError, match="executable not found"):
         sign_statement(str(statement_path), str(bundle_path))
+
+
+
+def test_signing_prompt_is_visible_before_user_input(tmp_path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    baseline_path.write_text(_snapshot().to_json(), encoding="utf-8")
+
+    cosign = tmp_path / "cosign-test"
+    cosign.write_text(
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "print('Open https://example.invalid/oidc', file=sys.stderr, flush=True)\n"
+        "if sys.stdin.readline().strip() != 'approve':\n"
+        "    raise SystemExit(4)\n"
+        "Path(sys.argv[sys.argv.index('--bundle') + 1]).write_text('{}')\n",
+        encoding="utf-8",
+    )
+    cosign.chmod(0o755)
+
+    command = [
+        sys.executable,
+        "-m",
+        "runtimetruth.cli",
+        "attest",
+        str(baseline_path),
+        "--statement",
+        str(statement_path),
+        "--bundle",
+        str(bundle_path),
+        "--cosign",
+        str(cosign),
+    ]
+    proc = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert proc.stderr is not None
+        readable, _, _ = select.select([proc.stderr], [], [], 5)
+        assert readable, "Cosign's login prompt was hidden while it waited for input"
+        assert proc.stderr.readline().strip() == "Open https://example.invalid/oidc"
+        assert proc.poll() is None
+
+        assert proc.stdin is not None
+        proc.stdin.write("approve\n")
+        proc.stdin.flush()
+        stdout, stderr = proc.communicate(timeout=10)
+        assert proc.returncode == 0, stderr
+        assert "BASELINE: sha256:" in stdout
+        assert statement_path.is_file()
+        assert bundle_path.is_file()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.communicate(timeout=10)
+
+
+def test_unlaunchable_cosign_reports_error_and_cleans_up(tmp_path) -> None:
+    invalid_cosign = tmp_path / "bad-cosign"
+    invalid_cosign.write_text("#!/missing/cosign-interpreter\n", encoding="utf-8")
+    invalid_cosign.chmod(0o755)
+
+    statement_path = tmp_path / "baseline.intoto.json"
+    bundle_path = tmp_path / "baseline.sigstore.json"
+    statement_path.write_bytes(statement_bytes(_snapshot()))
+
+    with pytest.raises(AttestationError, match="could not start cosign sign-blob"):
+        sign_statement(str(statement_path), str(bundle_path), cosign=str(invalid_cosign))
+    assert not bundle_path.exists()
+
+    bundle_path.write_text("{}", encoding="utf-8")
+    with pytest.raises(AttestationError, match="could not start cosign verify-blob"):
+        verify_statement_signature(
+            str(statement_path),
+            str(bundle_path),
+            certificate_identity="expected",
+            certificate_oidc_issuer="https://issuer.example",
+            cosign=str(invalid_cosign),
+        )
+
+
+def test_plain_digest_and_verify_do_not_need_cosign(monkeypatch, tmp_path, capsys) -> None:
+    from runtimetruth.cli import main
+
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(_snapshot().to_json(), encoding="utf-8")
+    monkeypatch.setattr(
+        "runtimetruth.attestation._resolve_cosign",
+        lambda command: (_ for _ in ()).throw(AssertionError("Cosign must not be used")),
+    )
+    assert main(["digest", str(baseline)]) == 0
+    assert main(["verify", str(baseline), str(baseline)]) == 0
+    assert "PASS" in capsys.readouterr().out

@@ -8,6 +8,8 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ### Fixed
 
+- show Cosign's keyless login instructions during optional baseline signing, and report executable startup errors without a traceback.
+- document Cosign as a separate optional tool and pin its version in the CI attestation test.
 - report Git discovery errors as collection failures instead of omitting repository evidence from a service snapshot.
 - report boolean-to-integer evidence changes as drift instead of treating `false`/`0` and `true`/`1` as equal.
 
