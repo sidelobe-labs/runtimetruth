@@ -95,9 +95,7 @@ def _cosign_error(action: str, result: subprocess.CompletedProcess[str]) -> Atte
     return AttestationError(f"cosign {action} failed with exit code {result.returncode}")
 
 
-def _run_cosign(
-    args: list[str], *, operation: str, interactive: bool = False
-) -> None:
+def _run_cosign(args: list[str], *, operation: str, interactive: bool = False) -> None:
     """Run Cosign; show interactive signing prompts instead of buffering them."""
     try:
         result = subprocess.run(

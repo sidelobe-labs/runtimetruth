@@ -399,7 +399,6 @@ def test_cosign_missing_is_error(monkeypatch, tmp_path) -> None:
         sign_statement(str(statement_path), str(bundle_path))
 
 
-
 def test_signing_prompt_is_visible_before_user_input(tmp_path) -> None:
     baseline_path = tmp_path / "baseline.json"
     statement_path = tmp_path / "baseline.intoto.json"
