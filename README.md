@@ -6,9 +6,9 @@
 
 RuntimeTruth collects Codex runtime settings and observations from the local environment. It compares them with a reviewed baseline, including model and permission settings, instruction-file fingerprints, and optional MCP server and tool information.
 
-[PyPI](https://pypi.org/project/runtimetruth/) · [Sidelobe overview](https://sidelobe.dev/open-source/runtimetruth/) · [Case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [Release notes](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.2)
+[PyPI](https://pypi.org/project/runtimetruth/) · [Sidelobe overview](https://sidelobe.dev/open-source/runtimetruth/) · [Case study](https://artur.panek.tech/work/runtimetruth/) · [Engineering note](https://artur.panek.tech/notes/ai-agent-config-vs-runtime/) · [Release notes](https://github.com/sidelobe-labs/runtimetruth/releases/tag/v0.2.3)
 
-> **Public alpha · v0.2.2.** Core inspect, diff, verification, policy, and signed-baseline flows are covered by CI and exercised against real local runtimes.
+> **Public alpha · v0.2.3.** Core inspect, diff, verification, policy, and signed-baseline flows are covered by CI and exercised against real local runtimes.
 
 ## Why
 

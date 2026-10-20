@@ -17,7 +17,7 @@ A CI runner can therefore use `runtimetruth verify` directly and let the process
 For normal CI usage, install the released package explicitly:
 
 ```bash
-python -m pip install "runtimetruth==0.2.0"
+python -m pip install "runtimetruth==0.2.3"
 ```
 
 For workflows that intentionally validate an unreleased revision, pin the exact Git commit:
