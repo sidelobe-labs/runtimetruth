@@ -79,7 +79,8 @@ def _resolve_cosign(command: str) -> str:
     resolved = shutil.which(command)
     if resolved is None:
         raise AttestationError(
-            f"cosign executable not found: {command!r}; install Sigstore cosign first"
+            f"cosign executable not found: {command!r}; install it separately for signing or "
+            "signed verification (https://docs.sigstore.dev/cosign/system_config/installation/)"
         )
     return resolved
 
@@ -92,6 +93,21 @@ def _cosign_error(action: str, result: subprocess.CompletedProcess[str]) -> Atte
             f"cosign {action} failed with exit code {result.returncode}: {detail}"
         )
     return AttestationError(f"cosign {action} failed with exit code {result.returncode}")
+
+
+def _run_cosign(args: list[str], *, operation: str, interactive: bool = False) -> None:
+    """Run Cosign; show interactive signing prompts instead of buffering them."""
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=not interactive,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise AttestationError(f"could not start cosign {operation}: {exc}") from exc
+    if result.returncode != 0:
+        raise _cosign_error(operation, result)
 
 
 def write_statement(snapshot: Snapshot, statement_path: str) -> str:
@@ -117,22 +133,22 @@ def sign_statement(
         raise AttestationError(f"refusing to overwrite existing file: {bundle_path!r}")
 
     executable = _resolve_cosign(cosign)
-    result = subprocess.run(
-        [
-            executable,
-            "sign-blob",
-            str(statement),
-            "--bundle",
-            str(bundle),
-            "--yes",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
+    try:
+        _run_cosign(
+            [
+                executable,
+                "sign-blob",
+                str(statement),
+                "--bundle",
+                str(bundle),
+                "--yes",
+            ],
+            operation="sign-blob",
+            interactive=True,
+        )
+    except AttestationError:
         bundle.unlink(missing_ok=True)
-        raise _cosign_error("sign-blob", result)
+        raise
 
     try:
         if bundle.stat().st_size == 0:
@@ -190,7 +206,7 @@ def verify_statement_signature(
         raise AttestationError("certificate OIDC issuer must not be empty")
 
     executable = _resolve_cosign(cosign)
-    result = subprocess.run(
+    _run_cosign(
         [
             executable,
             "verify-blob",
@@ -202,12 +218,8 @@ def verify_statement_signature(
             "--certificate-oidc-issuer",
             certificate_oidc_issuer,
         ],
-        capture_output=True,
-        text=True,
-        check=False,
+        operation="verify-blob",
     )
-    if result.returncode != 0:
-        raise _cosign_error("verify-blob", result)
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:

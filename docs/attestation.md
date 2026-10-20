@@ -22,9 +22,11 @@ RuntimeTruth does not implement custom cryptography. It uses RFC 8785 for JSON c
 
 ## Requirements
 
-- RuntimeTruth
-- a recent `cosign` executable available on `PATH`
-- an OIDC identity that Sigstore can use for keyless signing
+- RuntimeTruth (the normal installation does not include Cosign)
+- a separate [Cosign installation](https://docs.sigstore.dev/cosign/system_config/installation/) on `PATH`, or its executable path supplied via `--cosign` (CI currently tests v3.0.6)
+- an OIDC identity that Sigstore can use when **creating** keyless signatures
+
+Only `attest` and `verify-attestation` need Cosign. Normal `inspect`, `diff`, `digest`, and `verify` commands work without it. Check a signing installation with `cosign version`.
 
 For GitHub Actions, keyless signing normally requires:
 
@@ -99,7 +101,9 @@ The predicate contains only:
 
 The baseline contents are not duplicated into the statement predicate.
 
-RuntimeTruth refuses to overwrite an existing statement or bundle.
+Cosign may ask you to authenticate through a browser or device URL when signing locally. RuntimeTruth displays those instructions as they arrive and forwards terminal input. An OIDC-enabled CI job can sign non-interactively.
+
+RuntimeTruth refuses to overwrite an existing statement or bundle. A failed or interrupted signing command does not count as an attestation.
 
 ## 4. Verify identity and runtime
 
@@ -128,7 +132,7 @@ runtimetruth verify-attestation \
   --resolve-thread
 ```
 
-Verification fails closed.
+Verification does not need a new OIDC login: it checks the bundle against the expected identity and issuer. Verification fails closed; a missing or unlaunchable Cosign executable cannot cause an unsigned fallback.
 
 RuntimeTruth first asks `cosign verify-blob` to verify the exact statement bytes against:
 

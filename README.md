@@ -118,26 +118,13 @@ The same policy can be used with `verify-attestation`; signer identity and basel
 
 Add `--json` for a versioned machine-readable PASS/DRIFT report.
 
-Bind a reviewed baseline to an identity-backed Sigstore attestation:
+For portable signed baselines and signer identity verification, see [signed baseline attestations](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/attestation.md). This is optional and requires Cosign installed separately.
 
-```bash
-runtimetruth digest baseline.json
+## Optional signed baselines
 
-runtimetruth attest baseline.json \
-  --statement baseline.intoto.json \
-  --bundle baseline.sigstore.json
+RuntimeTruth's ordinary installation and its `inspect`, `diff`, `digest`, and `verify` commands do not need Cosign. Baselines can be reviewed and protected through the surrounding workflow.
 
-runtimetruth verify-attestation \
-  baseline.json \
-  --statement baseline.intoto.json \
-  --bundle baseline.sigstore.json \
-  --certificate-identity "EXPECTED_IDENTITY" \
-  --certificate-oidc-issuer "EXPECTED_ISSUER" \
-  --codex . \
-  --resolve-thread
-```
-
-Attestation uses RFC 8785 canonical JSON, SHA-256, in-toto Statement v1 and Sigstore Cosign rather than a RuntimeTruth-specific signature scheme. See [signed baseline attestations](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/attestation.md).
+For signed provenance, install [Sigstore Cosign](https://docs.sigstore.dev/cosign/system_config/installation/) separately and use `attest` and `verify-attestation`. These commands keep the existing in-toto/Sigstore format and require explicit signer identity verification. CI exercises this integration with Cosign v3.0.6. See the [attestation guide](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/attestation.md) for setup and examples.
 
 ## Current CLI
 
@@ -204,7 +191,7 @@ runtimetruth verify-attestation <baseline.json> [current.json] \
 
 `verify-attestation` can also use `--codex <cwd>`, `--resolve-thread`, `--resolve-mcp`, `--policy <file>`, repeatable `--protect`, and `--json`.
 
-Creating or verifying identity-backed attestations requires a recent [Sigstore Cosign](https://docs.sigstore.dev/cosign/system_config/installation/) executable. Normal inspect/diff/verify commands do not require Cosign.
+Only `attest` and `verify-attestation` require the external Cosign executable. A missing Cosign installation does not affect normal runtime verification.
 
 `--resolve-thread` creates an ephemeral Codex thread without starting a turn. `--resolve-mcp` additionally probes thread-scoped MCP runtime state and may contact configured MCP servers or refresh authentication; it does not call MCP tools.
 
