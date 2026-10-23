@@ -38,6 +38,17 @@ def _string(value: object, *, field: str) -> str:
     return value
 
 
+def _captured_at(value: object) -> str:
+    timestamp = _string(value, field="captured_at")
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SnapshotFormatError("captured_at must be a timezone-aware ISO 8601 timestamp") from exc
+    if "T" not in timestamp or parsed.utcoffset() is None:
+        raise SnapshotFormatError("captured_at must be a timezone-aware ISO 8601 timestamp")
+    return timestamp
+
+
 def _scalar_data(value: object, *, field: str) -> dict[str, JsonScalar]:
     payload = _object(value, field=field)
     data: dict[str, JsonScalar] = {}
@@ -131,10 +142,10 @@ class Snapshot:
         root = _object(payload, field="snapshot")
 
         schema_version = root.get("schema_version")
-        if schema_version != 1:
+        if type(schema_version) is not int or schema_version != 1:
             raise SnapshotFormatError(f"unsupported schema_version: {schema_version!r}")
 
-        captured_at = _string(root.get("captured_at"), field="captured_at")
+        captured_at = _captured_at(root.get("captured_at"))
 
         target_payload = _object(root.get("target"), field="target")
         target = Target(
