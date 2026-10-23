@@ -43,7 +43,9 @@ def _captured_at(value: object) -> str:
     try:
         parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise SnapshotFormatError("captured_at must be a timezone-aware ISO 8601 timestamp") from exc
+        raise SnapshotFormatError(
+            "captured_at must be a timezone-aware ISO 8601 timestamp"
+        ) from exc
     if "T" not in timestamp or parsed.utcoffset() is None:
         raise SnapshotFormatError("captured_at must be a timezone-aware ISO 8601 timestamp")
     return timestamp

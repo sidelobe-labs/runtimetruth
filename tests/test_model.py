@@ -111,12 +111,15 @@ def test_snapshot_parser_rejects_boolean_schema_version() -> None:
         Snapshot.from_dict(payload)
 
 
-@pytest.mark.parametrize("timestamp", [
-    "2026-02-30T00:00:00Z",
-    "2026-10-06T00:00:00",
-    "2026-10-06",
-    "not-a-timestamp",
-])
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "2026-02-30T00:00:00Z",
+        "2026-10-06T00:00:00",
+        "2026-10-06",
+        "not-a-timestamp",
+    ],
+)
 def test_snapshot_parser_rejects_invalid_capture_time(timestamp: str) -> None:
     payload = {
         "schema_version": 1,
@@ -131,11 +134,13 @@ def test_snapshot_parser_rejects_invalid_capture_time(timestamp: str) -> None:
 
 def test_snapshot_parser_accepts_capture_time_with_utc_offset() -> None:
     timestamp = "2026-10-06T02:00:00+02:00"
-    snapshot = Snapshot.from_dict({
-        "schema_version": 1,
-        "captured_at": timestamp,
-        "target": {"kind": "git.repository", "identifier": "/srv/agent"},
-        "evidence": [],
-    })
+    snapshot = Snapshot.from_dict(
+        {
+            "schema_version": 1,
+            "captured_at": timestamp,
+            "target": {"kind": "git.repository", "identifier": "/srv/agent"},
+            "evidence": [],
+        }
+    )
 
     assert snapshot.captured_at == timestamp
