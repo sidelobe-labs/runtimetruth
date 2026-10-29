@@ -4,6 +4,13 @@ All notable user-facing changes to RuntimeTruth are documented here.
 
 RuntimeTruth is pre-release software. Snapshot and report schemas are versioned independently from the package version, and compatibility guarantees may evolve before a stable 1.0 release.
 
+## [Unreleased]
+
+### Fixed
+
+- reject unavailable instruction fingerprints and incomplete MCP tool catalogs selected for verification, even when both snapshots contain the same collection failure.
+- preserve unavailable Codex instruction-source lists as missing evidence instead of reporting an empty inventory.
+
 ## [0.2.3] - 2026-10-20
 
 ### Fixed

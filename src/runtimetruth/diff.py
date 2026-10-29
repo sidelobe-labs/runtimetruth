@@ -170,13 +170,34 @@ def _parse_selectors(
     return selected
 
 
+def _require_complete_evidence(record: EvidenceRecord, fields: set[str] | None) -> None:
+    for field in sorted(record.data if fields is None else fields):
+        if record.kind == "codex.instructions":
+            if field.startswith("source:") and record.data.get(field) == "unavailable":
+                raise DiffError(f"unavailable instruction fingerprint: {field!r}")
+        elif record.kind == "codex.mcp" and field.startswith("server:"):
+            prefix, _, attribute = field.rpartition(":")
+            catalog_selected = attribute in {
+                "tools",
+                "tool_count",
+                "tool_names_included",
+                "tool_catalog_sha256",
+            } or (fields is None and attribute == "tool_catalog_status")
+            if catalog_selected and record.data.get(f"{prefix}:tool_catalog_status") != "available":
+                raise DiffError(f"unavailable MCP tool catalog: {prefix!r}")
+
+
 def diff_snapshots(
     before: Snapshot,
     after: Snapshot,
     *,
     selectors: tuple[str, ...] = (),
+    require_complete: bool = False,
 ) -> SnapshotDiff:
-    """Compare supported evidence records while ignoring capture time."""
+    """Compare supported evidence records while ignoring capture time.
+
+    Verification requires selected fingerprints and tool catalogs to be available.
+    """
     if before.target != after.target:
         raise DiffError(
             "snapshot targets differ: "
@@ -195,6 +216,12 @@ def diff_snapshots(
 
         left = before_records.get(kind)
         right = after_records.get(kind)
+
+        if require_complete:
+            selected_fields = selected[kind] if selected is not None else None
+            for record in (left, right):
+                if record is not None:
+                    _require_complete_evidence(record, selected_fields)
 
         if left is None and right is None:
             continue

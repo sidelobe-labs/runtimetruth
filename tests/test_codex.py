@@ -5,9 +5,10 @@ from pathlib import Path
 
 import pytest
 
+from runtimetruth.cli import main
 from runtimetruth.collectors.codex import _mcp_server_data, collect_codex_runtime
 from runtimetruth.collectors.errors import CollectionError
-from runtimetruth.model import EvidenceSource
+from runtimetruth.model import EvidenceSource, Snapshot, Target
 
 
 def _fake_codex(
@@ -15,6 +16,7 @@ def _fake_codex(
     *,
     malformed_config: bool = False,
     log_path: Path | None = None,
+    instruction_sources: str = "file",
 ) -> Path:
     executable = tmp_path / "codex"
     config_result = (
@@ -38,6 +40,12 @@ def _fake_codex(
         }"""
     )
     method_log = repr(str(log_path)) if log_path is not None else "None"
+    instruction_sources_field = {
+        "omitted": "",
+        "null": ', "instructionSources": None',
+        "empty": ', "instructionSources": []',
+        "file": ', "instructionSources": [message["params"]["cwd"] + "/AGENTS.md"]',
+    }[instruction_sources]
 
     executable.write_text(
         f"""#!/usr/bin/env python3
@@ -90,10 +98,7 @@ for line in sys.stdin:
                     "writableRoots": [message["params"]["cwd"]],
                     "networkAccess": False
                 }},
-                "reasoningEffort": "high",
-                "instructionSources": [
-                    message["params"]["cwd"] + "/AGENTS.md"
-                ]
+                "reasoningEffort": "high"{instruction_sources_field}
             }}
         }}), flush=True)
     elif method == "mcpServerStatus/list":
@@ -335,6 +340,32 @@ def test_collector_marks_missing_instruction_source_unavailable(tmp_path: Path) 
         "source_count": 1,
         f"source:{workspace / 'AGENTS.md'}": "unavailable",
     }
+
+
+@pytest.mark.parametrize("instruction_sources", ["omitted", "null", "empty"])
+def test_unreported_instruction_sources_do_not_become_an_empty_inventory(
+    tmp_path: Path, capsys, instruction_sources: str
+) -> None:
+    executable = _fake_codex(tmp_path, instruction_sources=instruction_sources)
+    records = collect_codex_runtime(
+        str(tmp_path), codex_binary=str(executable), resolve_thread=True
+    )
+    snapshot = Snapshot.capture(
+        target=Target(kind="codex.workspace", identifier=str(tmp_path)), evidence=records
+    )
+    path = tmp_path / "snapshot.json"
+    path.write_text(snapshot.to_json(), encoding="utf-8")
+
+    if instruction_sources == "empty":
+        assert records[2].data["instruction_sources"] == "[]"
+        assert records[3].kind == "codex.instructions"
+        assert records[3].data == {"source_count": 0}
+        assert main(["verify", str(path), str(path), "--protect", "codex.instructions"]) == 0
+    else:
+        assert "instruction_sources" not in records[2].data
+        assert all(record.kind != "codex.instructions" for record in records)
+        assert main(["verify", str(path), str(path), "--protect", "codex.instructions"]) == 1
+        assert "unavailable in both snapshots" in capsys.readouterr().err
 
 
 def test_collector_serializes_granular_approval_policy(tmp_path: Path) -> None:

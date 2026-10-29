@@ -189,6 +189,7 @@ def _verify(args: argparse.Namespace) -> int:
             baseline,
             current,
             selectors=selectors,
+            require_complete=True,
         ),
         target=baseline.target,
         selectors=selectors,
@@ -227,6 +228,7 @@ def _verify_attestation(args: argparse.Namespace) -> int:
         baseline,
         current,
         selectors=selectors,
+        require_complete=True,
     )
     status = "drift" if result.changes else "pass"
     exit_code = _VERIFY_DRIFT_EXIT if result.changes else 0
