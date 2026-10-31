@@ -148,6 +148,7 @@ def collect_git_repository(path: str, *, timeout: float = 5.0) -> EvidenceRecord
         "status",
         "--porcelain=v1",
         "--untracked-files=normal",
+        "--ignore-submodules=none",
         timeout=timeout,
     )
 
