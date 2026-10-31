@@ -62,6 +62,35 @@ def test_collector_detects_dirty_working_tree(tmp_path: Path) -> None:
     assert evidence.data["dirty"] is True
 
 
+@pytest.mark.parametrize("ignore", ["all", "dirty"])
+@pytest.mark.parametrize("change", ["tracked", "untracked"])
+def test_collector_detects_submodule_changes_hidden_by_ignore_settings(
+    tmp_path: Path, ignore: str, change: str
+) -> None:
+    repository, _ = _repository(tmp_path)
+    source_parent = tmp_path / "source"
+    source_parent.mkdir()
+    source, _ = _repository(source_parent)
+    _git(
+        repository,
+        "-c",
+        "protocol.file.allow=always",
+        "submodule",
+        "add",
+        str(source),
+        "dependency",
+    )
+    _git(repository, "commit", "-q", "-am", "add dependency")
+    _git(repository, "config", "submodule.dependency.ignore", ignore)
+
+    assert collect_git_repository(str(repository)).data["dirty"] is False
+
+    changed_path = "tracked.txt" if change == "tracked" else "untracked.txt"
+    (repository / "dependency" / changed_path).write_text("local change\n", encoding="utf-8")
+
+    assert collect_git_repository(str(repository)).data["dirty"] is True
+
+
 def test_collector_represents_detached_head(tmp_path: Path) -> None:
     repository, head_commit = _repository(tmp_path)
     _git(repository, "checkout", "-q", "--detach", head_commit)
