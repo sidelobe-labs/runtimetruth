@@ -150,6 +150,14 @@ Verify a current snapshot against a baseline:
 runtimetruth verify <baseline.json> <current.json>
 ```
 
+To require a recent current observation, add `--max-age` with a positive number of whole seconds:
+
+```console
+runtimetruth verify baseline.json current.json --max-age 300
+```
+
+This optional check also applies to `verify-attestation`. It checks only the current snapshot, so a reviewed historical baseline remains usable. Expired or future-dated current evidence is an error, even when its values match. See the [freshness boundary](https://github.com/sidelobe-labs/runtimetruth/blob/main/docs/trust-model.md#current-evidence-freshness) for clock and timestamp limitations.
+
 Or collect the current Codex runtime and verify it directly:
 
 ```console
