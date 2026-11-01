@@ -38,6 +38,8 @@ def load_policy(path: str) -> VerificationPolicy:
 
     try:
         payload = tomllib.loads(policy_path.read_text(encoding="utf-8"))
+    except UnicodeDecodeError as exc:
+        raise PolicyError(f"policy {path!r} must be UTF-8 TOML") from exc
     except OSError as exc:
         raise PolicyError(f"could not read policy {path!r}: {exc.strerror}") from exc
     except tomllib.TOMLDecodeError as exc:

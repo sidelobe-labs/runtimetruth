@@ -74,6 +74,8 @@ def load_snapshot(path: str) -> Snapshot:
 
     try:
         payload = snapshot_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise DiffError(f"snapshot {path!r} must be UTF-8 JSON") from exc
     except OSError as exc:
         raise DiffError(f"could not read snapshot {path!r}: {exc.strerror}") from exc
 
