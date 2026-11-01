@@ -6,6 +6,10 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+### Fixed
+
+- report non-UTF-8 snapshots and policy files as input errors instead of uncaught decoding exceptions.
+
 ### Added
 
 - optional `--max-age SECONDS` for plain and signed verification to reject expired or future-dated current snapshots without expiring historical baselines.
