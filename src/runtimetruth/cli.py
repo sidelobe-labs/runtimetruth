@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 from runtimetruth import __version__
 from runtimetruth.attestation import (
@@ -166,6 +167,28 @@ def _verification_selectors(args: argparse.Namespace) -> tuple[str, ...]:
     return tuple(dict.fromkeys((*policy_selectors, *args.protect)))
 
 
+def _positive_seconds(value: str) -> int:
+    try:
+        seconds = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer number of seconds") from exc
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer number of seconds")
+    return seconds
+
+
+def _check_current_age(current: Snapshot, max_age: int | None) -> None:
+    if max_age is None:
+        return
+    captured_at = datetime.fromisoformat(current.captured_at.replace("Z", "+00:00"))
+    age = datetime.now(UTC) - captured_at
+    age_microseconds = (age.days * 86400 + age.seconds) * 1_000_000 + age.microseconds
+    if age_microseconds < 0:
+        raise DiffError("current snapshot capture time is in the future; check the system clocks")
+    if age_microseconds > max_age * 1_000_000:
+        raise DiffError(f"current snapshot is older than --max-age {max_age} seconds")
+
+
 def _verify(args: argparse.Namespace) -> int:
     baseline = load_snapshot(args.baseline)
 
@@ -183,6 +206,7 @@ def _verify(args: argparse.Namespace) -> int:
     else:
         current = load_snapshot(args.current)
 
+    _check_current_age(current, args.max_age)
     selectors = _verification_selectors(args)
     return _render_verify(
         diff_snapshots(
@@ -222,6 +246,7 @@ def _verify_attestation(args: argparse.Namespace) -> int:
     else:
         current = load_snapshot(args.current)
 
+    _check_current_age(current, args.max_age)
     selectors = _verification_selectors(args)
     result = diff_snapshots(
         baseline,
@@ -380,6 +405,12 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument("baseline")
     verify_parser.add_argument("current", nargs="?")
     verify_parser.add_argument(
+        "--max-age",
+        type=_positive_seconds,
+        metavar="SECONDS",
+        help="Require current evidence no older than SECONDS; reject future capture times.",
+    )
+    verify_parser.add_argument(
         "--codex",
         metavar="PATH",
         help="Collect a live Codex runtime from PATH instead of loading CURRENT.",
@@ -428,6 +459,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_attestation_parser.add_argument("baseline")
     verify_attestation_parser.add_argument("current", nargs="?")
+    verify_attestation_parser.add_argument(
+        "--max-age",
+        type=_positive_seconds,
+        metavar="SECONDS",
+        help="Require current evidence no older than SECONDS; reject future capture times.",
+    )
     verify_attestation_parser.add_argument(
         "--statement",
         required=True,

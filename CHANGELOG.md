@@ -4,6 +4,12 @@ All notable user-facing changes to RuntimeTruth are documented here.
 
 RuntimeTruth is pre-release software. Snapshot and report schemas are versioned independently from the package version, and compatibility guarantees may evolve before a stable 1.0 release.
 
+## [Unreleased]
+
+### Added
+
+- optional `--max-age SECONDS` for plain and signed verification to reject expired or future-dated current snapshots without expiring historical baselines.
+
 ## [0.2.3] - 2026-10-20
 
 ### Fixed

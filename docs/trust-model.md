@@ -69,6 +69,16 @@ An unsigned baseline can still be replaced by an attacker who controls the verif
 
 See [signed baseline attestations](attestation.md).
 
+## Current evidence freshness
+
+`verify` and `verify-attestation` accept an optional `--max-age SECONDS`, a positive integer. After loading or collecting the current snapshot, they compare its `captured_at` timestamp with the verifier's UTC wall clock. An age exactly equal to the limit is accepted. An older snapshot, or any timestamp ahead of that clock, produces `ERROR` (exit `1`), with no PASS/DRIFT output even under `--json`.
+
+Timezone offsets are honoured. There is no implicit clock-skew allowance: keep collection and verification clocks synchronised, or recollect evidence on the verifier. A future timestamp is not evidence of freshness. The check applies to the current observation only, never to the baseline. In signed verification, baseline identity and digest checks still run before current evidence is collected or checked.
+
+Without `--max-age`, historical comparisons retain their existing behaviour and ignore capture time. `diff` always remains a historical comparison. Snapshot and report schemas are unchanged.
+
+This check trusts the current snapshot's timestamp and the verifier's clock. It does not authenticate current evidence, prove that collection was complete or atomic, or establish freshness of individual fields within a collection. Signing the baseline does not authenticate the current snapshot. A caller who can rewrite current evidence can also rewrite its timestamp.
+
 ## Codex thread boundary
 
 When `--resolve-thread` is used, RuntimeTruth starts a new ephemeral Codex thread to observe settings materialized for that thread. It does not inspect an already-running user's thread and does not start a model turn.
