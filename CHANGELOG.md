@@ -4,12 +4,13 @@ All notable user-facing changes to RuntimeTruth are documented here.
 
 RuntimeTruth is pre-release software. Snapshot and report schemas are versioned independently from the package version, and compatibility guarantees may evolve before a stable 1.0 release.
 
-## [Unreleased]
+## [0.2.4] — release candidate
 
 ### Fixed
 
 - reject unavailable instruction fingerprints and incomplete MCP tool catalogs selected for verification, even when both snapshots contain the same collection failure.
 - preserve unavailable Codex instruction-source lists as missing evidence instead of reporting an empty inventory.
+- include submodule working-tree changes in Git dirty-state evidence even when local ignore settings hide them from normal status output.
 - report non-UTF-8 snapshots and policy files as input errors instead of uncaught decoding exceptions.
 
 ### Added
