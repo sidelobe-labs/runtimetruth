@@ -8,6 +8,8 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ### Fixed
 
+- reject unavailable instruction fingerprints and incomplete MCP tool catalogs selected for verification, even when both snapshots contain the same collection failure.
+- preserve unavailable Codex instruction-source lists as missing evidence instead of reporting an empty inventory.
 - report non-UTF-8 snapshots and policy files as input errors instead of uncaught decoding exceptions.
 
 ### Added

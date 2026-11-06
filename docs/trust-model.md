@@ -29,6 +29,22 @@ Drift is not automatically malicious or unsafe. It can represent an intended run
 
 An error must not be treated as a PASS.
 
+Verification rejects selected instruction fingerprints marked `unavailable` and MCP
+tool-catalog fields whose server's `tool_catalog_status` is not `available`, in either
+snapshot. Matching collection failures do not establish matching file bytes or tool
+catalogs. An available empty tool catalog is valid evidence.
+
+This check follows the selected fields. For example, protecting only `source_count`,
+`server_count` or an observed status field does not require a file fingerprint or
+tool catalog. Protecting a whole evidence kind requires all its recorded
+fingerprints and catalogs to be available. `inspect` and `diff` keep partial
+evidence available for diagnosis.
+
+If Codex omits `instructionSources` or returns `null`, RuntimeTruth omits the
+instruction inventory instead of reporting zero sources. An explicit empty list
+still establishes an empty inventory. Protect `codex.instructions` when that
+evidence is required; a selector unavailable in both snapshots is an error.
+
 ## Evidence planes
 
 RuntimeTruth keeps three evidence concepts separate:

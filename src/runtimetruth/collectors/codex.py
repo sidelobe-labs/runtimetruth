@@ -142,10 +142,10 @@ def _safe_config_value(field: str, value: object) -> JsonScalar:
     raise CollectionError(f"codex config/read returned unsupported value type for {field!r}")
 
 
-def _instruction_sources(result: dict[str, object]) -> tuple[str, ...]:
+def _instruction_sources(result: dict[str, object]) -> tuple[str, ...] | None:
     value = result.get("instructionSources")
     if value is None:
-        return ()
+        return None
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise CollectionError("codex thread/start returned invalid instructionSources")
     return tuple(value)
@@ -165,7 +165,7 @@ def _thread_id(result: dict[str, object]) -> str:
 def _thread_evidence(
     result: dict[str, object],
     *,
-    instruction_sources: tuple[str, ...],
+    instruction_sources: tuple[str, ...] | None,
 ) -> EvidenceRecord:
     thread = result.get("thread")
     if not isinstance(thread, dict):
@@ -202,7 +202,7 @@ def _thread_evidence(
     if sandbox is not None:
         data["sandbox"] = _safe_json(sandbox, field="sandbox")
 
-    if "instructionSources" in result:
+    if instruction_sources is not None:
         data["instruction_sources"] = json.dumps(
             list(instruction_sources),
             separators=(",", ":"),
@@ -591,9 +591,10 @@ def collect_codex_runtime(
     records = [runtime, effective_config]
     if thread is not None:
         records.append(thread)
+    if instruction_sources is not None:
         records.append(
             _instruction_file_evidence(
-                instruction_sources or (),
+                instruction_sources,
                 cwd=resolved_cwd,
             )
         )
