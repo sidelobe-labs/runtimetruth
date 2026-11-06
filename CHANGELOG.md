@@ -8,6 +8,7 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ### Fixed
 
+- include submodule working-tree changes in Git dirty-state evidence even when local ignore settings hide them from normal status output.
 - report non-UTF-8 snapshots and policy files as input errors instead of uncaught decoding exceptions.
 
 ### Added
