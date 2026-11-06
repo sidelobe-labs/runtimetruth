@@ -52,6 +52,11 @@ Current collectors cover:
 
 Collection follows an allowlist model. Sensitive values such as environment secrets, auth tokens, instruction plaintext and MCP command configuration are not serialized.
 
+Git dirty-state collection includes submodule working-tree changes even when
+submodule ignore settings hide them from normal status output. The snapshot
+retains the top-level repository identity and one aggregate dirty flag. It does
+not fingerprint individual submodule contents or inventory ignored files.
+
 ### Runtime adapters
 
 The first agent-aware adapter is Codex.
