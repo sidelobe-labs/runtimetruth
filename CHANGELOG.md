@@ -6,10 +6,13 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-10
+
 ### Fixed
 
 - preserve trailing spaces, tabs and newlines in Git working-tree paths when collecting repository identity.
 - report non-UTF-8 snapshots and policy files as input errors instead of uncaught decoding exceptions.
+- require an integer snapshot schema version and a timezone-aware ISO 8601 capture timestamp.
 
 ### Added
 
