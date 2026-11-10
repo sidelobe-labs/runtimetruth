@@ -118,7 +118,7 @@ def collect_git_repository(path: str, *, timeout: float = 5.0) -> EvidenceRecord
             raise NotRepositoryError(f"path is not inside a Git work tree: {path!r}")
         raise CollectionError("git could not resolve the work tree root (exit status 128)")
 
-    repository_root = Path(root_result.stdout.strip()).resolve()
+    repository_root = Path(root_result.stdout.removesuffix("\n")).resolve()
 
     head_result = _run_git(
         repository_root,

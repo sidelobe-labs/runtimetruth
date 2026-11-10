@@ -62,6 +62,25 @@ def test_collector_detects_dirty_working_tree(tmp_path: Path) -> None:
     assert evidence.data["dirty"] is True
 
 
+@pytest.mark.parametrize("suffix", [" ", "\t", "\n"], ids=["space", "tab", "newline"])
+@pytest.mark.parametrize("sibling_exists", [False, True], ids=["alone", "with-sibling"])
+def test_collector_preserves_repository_path_whitespace(
+    tmp_path: Path, suffix: str, sibling_exists: bool
+) -> None:
+    repository, head_commit = _repository(tmp_path)
+    repository = repository.rename(tmp_path / f"repo{suffix}")
+    (repository / "untracked.txt").write_text("local change\n", encoding="utf-8")
+    if sibling_exists:
+        sibling, _ = _repository(tmp_path)
+        _git(sibling, "commit", "-q", "--allow-empty", "-m", "different repository")
+
+    evidence = collect_git_repository(str(repository))
+
+    assert evidence.data["repository_root"] == str(repository.resolve())
+    assert evidence.data["head_commit"] == head_commit
+    assert evidence.data["dirty"] is True
+
+
 def test_collector_represents_detached_head(tmp_path: Path) -> None:
     repository, head_commit = _repository(tmp_path)
     _git(repository, "checkout", "-q", "--detach", head_commit)
