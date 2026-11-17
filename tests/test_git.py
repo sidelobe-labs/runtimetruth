@@ -103,3 +103,21 @@ def test_collector_rejects_non_repository_path(tmp_path: Path) -> None:
 def test_missing_path_remains_collection_error(tmp_path: Path) -> None:
     with pytest.raises(CollectionError, match="does not exist"):
         collect_git_repository(str(tmp_path / "missing"))
+
+
+@pytest.mark.parametrize("suffix", ["\r", "\r\n"], ids=["cr", "crlf"])
+def test_collector_preserves_carriage_returns_in_repository_path(
+    tmp_path: Path, suffix: str
+) -> None:
+    repository, head_commit = _repository(tmp_path)
+    repository = repository.rename(tmp_path / f"repo{suffix}")
+    (repository / "untracked.txt").write_text("local change\n", encoding="utf-8")
+    sibling, _ = _repository(tmp_path)
+    _git(sibling, "commit", "-q", "--allow-empty", "-m", "different repository")
+    sibling.rename(tmp_path / "repo\n")
+
+    evidence = collect_git_repository(str(repository))
+
+    assert evidence.data["repository_root"] == str(repository.resolve())
+    assert evidence.data["head_commit"] == head_commit
+    assert evidence.data["dirty"] is True
