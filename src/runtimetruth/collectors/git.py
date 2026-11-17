@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import locale
 import os
 import subprocess
 from pathlib import Path
@@ -27,7 +28,6 @@ def _run_git(
             command,
             check=False,
             capture_output=True,
-            text=True,
             timeout=timeout,
             env={**os.environ, "LC_ALL": "C"},
         )
@@ -39,7 +39,14 @@ def _run_git(
     if completed.returncode not in allowed_returncodes:
         raise CollectionError(f"git command failed with exit status {completed.returncode}")
 
-    return completed
+    # Decode without universal-newline conversion so Git paths stay intact.
+    encoding = locale.getpreferredencoding(False)
+    return subprocess.CompletedProcess(
+        completed.args,
+        completed.returncode,
+        completed.stdout.decode(encoding),
+        completed.stderr.decode(encoding),
+    )
 
 
 def _git_ceiling_directories() -> set[str]:
