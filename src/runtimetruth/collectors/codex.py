@@ -50,6 +50,8 @@ def _run_codex_version(binary: Path, *, timeout: float) -> str:
         )
     except subprocess.TimeoutExpired as exc:
         raise CollectionError("codex --version timed out") from exc
+    except OSError as exc:
+        raise CollectionError(f"could not start codex --version: {exc}") from exc
 
     if completed.returncode != 0:
         raise CollectionError(f"codex --version failed with exit status {completed.returncode}")
@@ -69,8 +71,11 @@ def _reader(stdout: TextIO, output: queue.Queue[str | None]) -> None:
 
 
 def _send_message(stdin: TextIO, payload: dict[str, object]) -> None:
-    stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
-    stdin.flush()
+    try:
+        stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
+        stdin.flush()
+    except OSError as exc:
+        raise CollectionError(f"could not write to codex app-server: {exc}") from exc
 
 
 def _read_response(
