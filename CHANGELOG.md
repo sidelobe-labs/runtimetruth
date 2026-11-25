@@ -6,6 +6,8 @@ RuntimeTruth is pre-release software. Snapshot and report schemas are versioned 
 
 ## [Unreleased]
 
+- report systemctl permission and executable-format failures as collection errors instead of uncaught exceptions.
+
 ## [0.2.4] - 2026-11-10
 
 ### Fixed
