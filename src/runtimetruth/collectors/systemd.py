@@ -135,6 +135,8 @@ def collect_systemd_unit(unit: str, *, timeout: float = 5.0) -> EvidenceRecord:
         raise CollectionError("systemctl is not available on this host") from exc
     except subprocess.TimeoutExpired as exc:
         raise CollectionError(f"systemctl timed out while inspecting {unit!r}") from exc
+    except OSError as exc:
+        raise CollectionError(f"could not start systemctl: {exc.strerror}") from exc
 
     if completed.returncode != 0:
         raise CollectionError(
